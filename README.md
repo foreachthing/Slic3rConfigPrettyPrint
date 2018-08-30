@@ -25,4 +25,8 @@ Style is in `LaTexStyle()`.
 
 
 ## Preview
+### Summary
 ![preview](https://raw.githubusercontent.com/foreachthing/Slic3rConfigPrettyPrint/master/preview.png)
+
+### Bed shape
+![preview](https://raw.githubusercontent.com/foreachthing/Slic3rConfigPrettyPrint/master/preview2.png)
