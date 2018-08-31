@@ -347,7 +347,7 @@ def processSubSummaryline(sline):
             if matchNum==2:
                 str2=str2 + ' $\\approx$ \\SI[per-mode=fraction]{'+m.group()+'}{\\cubic\\mm\\per\\second}'
 
-        sline = str1 +' \\dotfill & ' + str2 + ' \\\\\n'
+        sline = str1.title() +' \\dotfill & ' + str2 + ' \\\\\n'
 
     return sline
 
