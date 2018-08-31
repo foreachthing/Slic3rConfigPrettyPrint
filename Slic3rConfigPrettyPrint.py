@@ -85,13 +85,7 @@ def main():
         # print("{0}".format(strFirstLine))
 
         for strLine in mylines:
-
             
-            if 'before_Layer_gcode'.lower() in strLine.lower():
-                print (strLine)
-
-
-
             if strLine.startswith('\n'):
                 break
             if '\n' in strLine:
