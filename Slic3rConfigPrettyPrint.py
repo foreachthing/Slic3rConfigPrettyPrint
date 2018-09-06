@@ -510,7 +510,7 @@ def rn(str):
 
 
 def LaTeXStringFilter(mystring):
-    mystring = mystring.replace('_','\_')
+    mystring = mystring.replace('_','\\_')
 
     return mystring
 
