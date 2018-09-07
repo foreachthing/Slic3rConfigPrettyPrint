@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+#TODO:
+# Filament usage in Meter
+# Option: only summary, only additional gcodes,
+
 import os 
 from os import path
 import sys
@@ -12,16 +16,25 @@ import subprocess
 
 ## ArgumentParser
 parser = argparse.ArgumentParser(
-    prog = 'PROG_NAME',
+    prog = os.path.basename(__file__),
     description = 'Change the option prefix characters', 
     prefix_chars = '-+/',
-    epilog = 'Note: -b and -t can be combined as -bt or -tb.', )
+    epilog = '', )
 
 parser.add_argument('filename', nargs = '?', help = 'Filename (GCode-File) to process.')
-parser.add_argument('author', metavar = 'author', nargs = '?', default = os.getenv('username'), help = 'The Author of the GCode-File (default: %(default)s)')
+parser.add_argument('-au', '--author', metavar = '"Author Name"', default = os.getenv('username').title(), help = 'The Author of the GCode-File (default: %(default)s)')
+#
+grpDisable = parser.add_argument_group('Disable printing of ...', 'Note: -b and -t can be combined as -bt or -tb.')
+grpDisable.add_argument('-b', action = 'store_false', default = True, help = 'Bed Shape as graphic')
+grpDisable.add_argument('-t', action = 'store_false', default = True, help = 'Bed Shape as text (xy coordinates)')
+grpDisable.add_argument('-g', action = 'store_false', default = True, help = 'GCode fields (start, end, filament, layer, etc.)')
+#
+group = parser.add_mutually_exclusive_group()
+group.add_argument('-c', action = 'store_true', default = False, help = 'Print configuration section only')
+group.add_argument('-s', action = 'store_true', default = False, help = 'Print summary section only')
 
-parser.add_argument('-b', action = 'store_false', default = True, help = 'Disables printing of bed shape as graphic')
-parser.add_argument('-t', action = 'store_false', default = True, help = 'Disables printing of bed shape as text (xy coordinates)')
+parser.add_argument("-cc", "--commentcolor", action='store', type=str, metavar = '[hex]', default = 'ff0000',  help = 'Font color of comments in HEX (default: %(default)s without leading #)')
+
 
 if not len(sys.argv) > 1:
     print('\n\n*** WARNING ***\nNo Parameter(s) provided but at least one (GCode-filename) required. \n*** Type "[PROG_NAME] -h" for help ***\nI shall exit here.')
@@ -31,10 +44,14 @@ try:
 except IOError as msg:
     parser.error(str(msg))
 
-myAuthor = args.author
-bbed_shape = args.b
-bbed_shapetxt=args.t
-filename = Path(str(args.filename))
+strAuthor           = args.author
+bbed_shape          = args.b
+bbed_shapetxt       = args.t
+bgcode_fields       = args.g
+bSection_Config     = args.c
+bSection_Summary    = args.s
+filename            = Path(str(args.filename))
+strFontCommentColor = args.commentcolor
 ## END ArgumentParser
 
 ## get and set paths
@@ -82,10 +99,8 @@ def main():
         # reverse it and stop at the first empty line
         mylines.reverse()
 
-        # print("{0}".format(strFirstLine))
-
         for strLine in mylines:
-            
+
             if strLine.startswith('\n'):
                 break
             if '\n' in strLine:
@@ -103,54 +118,27 @@ def main():
  
             lowline = strLine.lower()
 
-            if lowline.startswith('start_gcode') or lowline.startswith('end_gcode') or lowline.startswith('between_objects_gcode') or lowline.startswith('layer_gcode') or lowline.startswith('post_process') or lowline.startswith('bed_shape') or lowline.startswith('before_layer_gcode') or lowline.startswith('notes') or lowline.startswith('printer_notes') or lowline.startswith('filament_notes'):
-                
-                if lowline.startswith('bed_shape'):
-                    strXYs = processBedShape(lowline)
-
-                    if bbed_shape:
-                        addtext = ''
-                        if bbed_shapetxt == False:
-                            addtext = 'Bed Shape & \\\\\n'
-
-                        # make a graphical representation of the bed shape - if desired
-                        bedgraph = addtext +' & \\begin{scaletikzpicturetowidth}{\\linewidth}\\begin{tikzpicture}[scale=\\tikzscale]\\path[line width=0.5mm, draw=black, fill=colbedshape] plot file {'+ str(outputbedshape.name) +'};\\draw[step=10, color=gray] ('+ str(gridxmin) +', '+ str(gridymin) +') grid ('+ str(gridxmax) +', '+ str(gridymax) +');\\end{tikzpicture}\\end{scaletikzpicturetowidth} \\\\\n'
-                        lstCompleteNewLines.append(bedgraph)
-
-                    if bbed_shapetxt:
-                        lstCompleteNewLines.append(strXYs)                    
-
-                    continue
+            if lowline.startswith('start_gcode') or lowline.startswith('end_gcode') or lowline.startswith('between_objects_gcode') or lowline.startswith('layer_gcode') or lowline.startswith('before_layer_gcode') or lowline.startswith('post_process') or lowline.startswith('bed_shape') or lowline.startswith('notes') or lowline.startswith('printer_notes') or lowline.startswith('filament_notes'):
+                if (bgcode_fields == False):
+                    
+                    if lowline.startswith('start_gcode') or lowline.startswith('end_gcode') or lowline.startswith('between_objects_gcode') or lowline.startswith('layer_gcode') or lowline.startswith('before_layer_gcode'):
+                        print('no gcode please')
+                        continue
+                    else:
+                        processGCodeLines(strLine, lowline, lstCompleteNewLines)
+                        continue
 
                 else:
-            
-                    # remove tabs and replace with space
-                    strLine = strLine.replace('\t',' ')
-
-                    # make a list, so it can be reversed before reversing - wow! Yeah! I know!
-                    lstSublines = list()
-
-                    # split line by the equal sign
-                    sublines = strLine.split('=')[1].split('\\n')
-                
-                    tmpsubl = processPostProcessLines(lowline,sublines[0])
-                    lstSublines.append("{0}: & \\\\\n".format(strLine.split('=')[0].title().replace('_',' ')))
-
-                    if len(sublines) > 0:
-                        for subline in sublines:
-                            subline = processPostProcessLines(lowline, subline)               
-                            lstSublines.append('\\multicolumn{2}{p{\\linewidth}}{\\bfseries\\ttfamily '+ subline +'} \\\\\n')
-                            
-                    # reverse it (-1)
-                    lstSublines.reverse()
-                    lstCompleteNewLines.extend(lstSublines)
-
+                    print('more gcode')
+                    # SUB HERE
+                    processGCodeLines(strLine, lowline, lstCompleteNewLines)
                     continue
 
             spline = strLine.split('=')
 
             strFirst = spline[0].title().replace('_',' ')
             strSecond = LaTeXStringFilter(spline[1])
+
 
             # print("Option:  {0:50}   Value:  {1}".format(strFirst, strSecond))
             lstCompleteNewLines.append("{0} \\dotfill  & {1} \\\\\n".format(strFirst, strSecond))
@@ -183,6 +171,49 @@ def main():
         styout.close()
 
 
+def processGCodeLines(strLine, lowline, lstCompleteNewLines):
+    if lowline.startswith('bed_shape'):
+        strXYs = processBedShape(lowline)
+
+        if bbed_shape:
+            addtext = ''
+            if bbed_shapetxt == False:
+                addtext = 'Bed Shape & \\\\\n'
+
+            # make a graphical representation of the bed shape - if desired
+            bedgraph = addtext +' & \\begin{scaletikzpicturetowidth}{\\linewidth}\\begin{tikzpicture}[scale=\\tikzscale]\\path[line width=0.5mm, draw=black, fill=colbedshape] plot file {'+ str(outputbedshape.name) +'};\\draw[step=10, color=gray] ('+ str(gridxmin) +', '+ str(gridymin) +') grid ('+ str(gridxmax) +', '+ str(gridymax) +');\\end{tikzpicture}\\end{scaletikzpicturetowidth} \\\\\n'
+            lstCompleteNewLines.append(bedgraph)
+
+        if bbed_shapetxt:
+            lstCompleteNewLines.append(strXYs)                    
+
+    else:
+            
+        # remove tabs and replace with space
+        strLine = strLine.replace('\t',' ')
+
+        # make a list, so it can be reversed before reversing - wow! Yeah! I know!
+        lstSublines = list()
+
+        # split line by the equal sign
+        sublines = strLine.split('=')[1].split('\\n')
+                
+        tmpsubl = processPostProcessLines(lowline,sublines[0])
+        lstSublines.append("{0}: & \\\\\n".format(strLine.split('=')[0].title().replace('_',' ')))
+
+        if len(sublines) > 0:
+            for subline in sublines:
+                subline = processPostProcessLines(lowline, subline)
+                
+                if ';' in subline:
+                    strSecSplits = subline.split('; ')
+                    subline = strSecSplits[0] + ' ; {\\color{CommentColor} ' + strSecSplits[1] + ' }'
+                       
+                lstSublines.append('\\multicolumn{2}{p{\\linewidth}}{\\bfseries\\ttfamily '+ subline +'} \\\\\n')
+                            
+        # reverse it (-1)
+        lstSublines.reverse()
+        lstCompleteNewLines.extend(lstSublines)
 
 
 def processBedShape(bsline):
@@ -228,7 +259,6 @@ def processBedShape(bsline):
     myxystr = '\\multicolumn{2}{p{\\linewidth}}{\\bfseries '+ myxystr +'} \\\\\n '
 
     return strFirstLine+myxystr
-
 
 
 # make LaTeX main file
@@ -289,7 +319,6 @@ def makeLaTeXMain(lstCompleteNewLines, lstSummary):
     out.write('\\endinput\n\n')
 
 
-
 def processFilamentLine(fline):
 
     fline = rn(fline)
@@ -331,6 +360,7 @@ def processFilamentLine(fline):
         fline = fline +' & \\\\\n'
 
     return fline
+
 
 def processSubSummaryline(sline):
 
@@ -451,6 +481,7 @@ def LaTexStyle():
     styout.write('\\titlecontents{section}[\\tocsep]{\\addvspace{0pt}\\normalsize\\bfseries}{\\contentslabel[\\thecontentslabel]{\\tocsep}}{}{\\dotfill\\thecontentspage}[]\n')
     styout.write('\\titlecontents{subsection}[2\\tocsep]{\\addvspace{0pt}\\small}{\\contentslabel[\\thecontentslabel]{\\tocsep}}{}{\\ \\titlerule*[.5pc]{.}\\ \\thecontentspage}[]\n')
     styout.write('\\titlecontents*{subsubsection}[\\tocsep]{\\footnotesize}{}{}{}[\\ \\textbullet\\ ]\n')
+    styout.write('\\definecolor{CommentColor}{HTML}{' + strFontCommentColor + '}')
     styout.write('\\endinput\n')
 
 
@@ -461,7 +492,7 @@ def LaTexTemplate():
     tplout.write('10pt,\n')
     tplout.write(']{scrartcl}\n')
     tplout.write('\\def\\filename{' + LaTeXStringFilter(str(filename.stem).title()) + '}\n')
-    tplout.write('\\def\\author{'+ LaTeXStringFilter(myAuthor).title() +'}\n')
+    tplout.write('\\def\\author{'+ LaTeXStringFilter(strAuthor).title() +'}\n')
     tplout.write('\\def\\date{\\today}\n')
     tplout.write('\\usepackage{'+ str(outputstyle.stem) +'}\n')
 
@@ -483,23 +514,28 @@ def LaTexTemplate():
     # instead \\directory[/] use \\nolinkurl
     tplout.write('\\marginnote{Content:}    {\\tableofcontents}\n')
     tplout.write('\\vspace{-8pt}\\rule{\\linewidth}{.4pt}\n')
-    tplout.write('\\section{Summary}\n')
-    tplout.write('\\begin{tabularx}{\\linewidth}{@{}p{7.5cm}>{\\bfseries}X@{}}\n')
-    tplout.write('	\\caption{\\filename{} Summary} \\\\[-8pt] &  \\\\ \\toprule\n')
-    tplout.write('	\\textbf{Option} & \\textbf{Value} \\\\ \\midrule\n')
-    tplout.write('	\endhead	\n')
-    tplout.write('		\\input{'+ str(outputsummary.stem) +'.tex}\n')
-    tplout.write('	\\bottomrule\n')
-    tplout.write('\\end{tabularx}\n')
-    tplout.write('\\newpage\n')
-    tplout.write('\\section{Slic3r Configuration}\n')
-    tplout.write('\\begin{tabularx}{\\linewidth}{@{}p{7.5cm}>{\\bfseries}X@{}}\n')
-    tplout.write('	\\caption{\\filename{} Slic3r-Configuration} \\\\[-8pt] &  \\\\ \\toprule\n')
-    tplout.write('	\\textbf{Option} & \\textbf{Value} \\\\ \\midrule\n')
-    tplout.write('	\\endhead	\n')
-    tplout.write('		\\input{'+ str(outputconfig.stem) +'.tex}\n')
-    tplout.write('	\\bottomrule\n')
-    tplout.write('\\end{tabularx}\n')
+    
+    if (bSection_Config == False):
+        tplout.write('\\section{Summary}\n')
+        tplout.write('\\begin{tabularx}{\\linewidth}{@{}p{7.5cm}>{\\bfseries}X@{}}\n')
+        tplout.write('	\\caption{\\filename{} Summary} \\\\[-8pt] &  \\\\ \\toprule\n')
+        tplout.write('	\\textbf{Option} & \\textbf{Value} \\\\ \\midrule\n')
+        tplout.write('	\endhead	\n')
+        tplout.write('		\\input{'+ str(outputsummary.stem) +'.tex}\n')
+        tplout.write('	\\bottomrule\n')
+        tplout.write('\\end{tabularx}\n')
+        tplout.write('\\newpage\n')
+
+    if (bSection_Summary == False):
+        tplout.write('\\section{Slic3r Configuration}\n')
+        tplout.write('\\begin{tabularx}{\\linewidth}{@{}p{7.5cm}>{\\bfseries}X@{}}\n')
+        tplout.write('	\\caption{\\filename{} Slic3r-Configuration} \\\\[-8pt] &  \\\\ \\toprule\n')
+        tplout.write('	\\textbf{Option} & \\textbf{Value} \\\\ \\midrule\n')
+        tplout.write('	\\endhead	\n')
+        tplout.write('		\\input{'+ str(outputconfig.stem) +'.tex}\n')
+        tplout.write('	\\bottomrule\n')
+        tplout.write('\\end{tabularx}\n')
+
     tplout.write('\\end{document}\n')
 
 
@@ -510,7 +546,7 @@ def rn(str):
 
 
 def LaTeXStringFilter(mystring):
-    mystring = mystring.replace('_','\\_')
+    mystring = mystring.replace('_','\_')
 
     return mystring
 
@@ -527,6 +563,7 @@ def runLaTeX():
         os.unlink('MainPDF.pdf')
     else:
         subprocess.Popen('MainPDF.pdf', shell = True)
+
 
 
 try:
