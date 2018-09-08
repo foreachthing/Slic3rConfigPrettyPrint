@@ -23,9 +23,11 @@ Use these, optional, parameters:
 
 ## Examples
 Input: `PROG  mySlicedFile.gcode -t -au "Mister Slic3r"`
+
 Output: PDF with graphic of bed shape, no xys. Change the author name to "Mister Slic3r".
 
 Input: `PROG  mySlicedFile.gcode -c -cc dd0034`
+
 Output: PDF without the summary and comments colors in dd0034'.
 
 ## Customize
