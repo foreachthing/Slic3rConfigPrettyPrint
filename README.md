@@ -12,14 +12,23 @@ def runLaTeX():
 Just run the script with your GCode-file as first parameter. I.e. `PROG mySlicedFile.gcode`
 
 Use these, optional, parameters:
+* -au|--author define the author of the pdf
 * -b removes the graphic representation of the bed shape
 * -t removes the text (xy coordinates) of the bed shape
 * -bt removes the bed shape completely
+* -g removes all gcode sections
+* -c prints the configuration section only
+* -s prints the summary section only
+* -cc|--commentcolor changes the color of gcode comments (default: red)
 
-Input: `PROG  mySlicedFile.gcode -t`
-Output: PDF with graphic of bed shape, no xys'.
+## Examples
+Input: `PROG  mySlicedFile.gcode -t -au "Mister Slic3r"`
+Output: PDF with graphic of bed shape, no xys. Change the author name to "Mister Slic3r".
 
+Input: `PROG  mySlicedFile.gcode -c -cc dd0034`
+Output: PDF without the summary and comments colors in dd0034'.
 
+## Customize
 Edit `LaTexTemplate()` to match your usual layout.
 Style is in `LaTexStyle()`.
 
