@@ -27,7 +27,7 @@ parser.add_argument('-au', '--author', metavar = '"Author Name"', default = os.g
 grpDisable = parser.add_argument_group('Disable printing of ...', 'Note: -b and -t can be combined as -bt or -tb.')
 grpDisable.add_argument('-b', action = 'store_false', default = True, help = 'Bed Shape as graphic')
 grpDisable.add_argument('-t', action = 'store_false', default = True, help = 'Bed Shape as text (xy coordinates)')
-grpDisable.add_argument('-g', action = 'store_false', default = True, help = 'GCode fields (start, end, filament, layer, etc.)')
+grpDisable.add_argument('-g', action = 'store_false', default = True, help = 'Removes all GCode fields (start, end, filament, layer, etc.)')
 #
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-c', action = 'store_true', default = False, help = 'Print configuration section only')
