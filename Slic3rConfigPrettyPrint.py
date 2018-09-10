@@ -2,7 +2,6 @@
 
 #TODO:
 # Filament usage in Meter
-# Option: only summary, only additional gcodes,
 
 import os 
 from os import path
@@ -28,6 +27,7 @@ grpDisable = parser.add_argument_group('Disable printing of ...', 'Note: -b and 
 grpDisable.add_argument('-b', action = 'store_false', default = True, help = 'Bed Shape as graphic')
 grpDisable.add_argument('-t', action = 'store_false', default = True, help = 'Bed Shape as text (xy coordinates)')
 grpDisable.add_argument('-g', action = 'store_false', default = True, help = 'Removes all GCode fields (start, end, filament, layer, etc.)')
+grpDisable.add_argument('-o', action = 'store_true', default = False, help = 'Open PDF after creation.')
 #
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-c', action = 'store_true', default = False, help = 'Print configuration section only')
@@ -52,6 +52,7 @@ bSection_Config     = args.c
 bSection_Summary    = args.s
 filename            = Path(str(args.filename))
 strFontCommentColor = args.commentcolor
+bOpenPDF            = args.o
 ## END ArgumentParser
 
 ## get and set paths
@@ -562,7 +563,8 @@ def runLaTeX():
     if not retcode == 0:
         os.unlink('MainPDF.pdf')
     else:
-        subprocess.Popen('MainPDF.pdf', shell = True)
+        if bOpenPDF:
+            subprocess.Popen('MainPDF.pdf', shell = True)
 
 
 
@@ -572,4 +574,3 @@ try:
     runLaTeX()
 except:
     print('Somme silly snake-error has occured: ' + str(sys.exc_info()[0]))
-
