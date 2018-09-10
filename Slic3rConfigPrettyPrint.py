@@ -27,14 +27,13 @@ grpDisable = parser.add_argument_group('Disable printing of ...', 'Note: -b and 
 grpDisable.add_argument('-b', action = 'store_false', default = True, help = 'Bed Shape as graphic')
 grpDisable.add_argument('-t', action = 'store_false', default = True, help = 'Bed Shape as text (xy coordinates)')
 grpDisable.add_argument('-g', action = 'store_false', default = True, help = 'Removes all GCode fields (start, end, filament, layer, etc.)')
-grpDisable.add_argument('-o', action = 'store_true', default = False, help = 'Open PDF after creation.')
 #
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-c', action = 'store_true', default = False, help = 'Print configuration section only')
 group.add_argument('-s', action = 'store_true', default = False, help = 'Print summary section only')
 
 parser.add_argument("-cc", "--commentcolor", action='store', type=str, metavar = '[hex]', default = 'ff0000',  help = 'Font color of comments in HEX (default: %(default)s without leading #)')
-
+parser.add_argument('-o', action = 'store_true', default = False, help = 'Open PDF after creation.')
 
 if not len(sys.argv) > 1:
     print('\n\n*** WARNING ***\nNo Parameter(s) provided but at least one (GCode-filename) required. \n*** Type "[PROG_NAME] -h" for help ***\nI shall exit here.')
