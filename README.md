@@ -5,7 +5,9 @@ Prints the a Configuration-Report of a GCode File sliced with Slic3r
 pdflatex (tested with TexLive 2018) or similar. Make adjustments in the script accordingly:
 ```
 def runLaTeX():
-    cmd = ['pdflatex', '-interaction', 'nonstopmode', tplout.name]
+ ...
+    cmd = [ 'pdflatex', '-output-directory', dir_path2, '-interaction=nonstopmode', texfile] 
+ ...
 ```
 
 ## Usage
