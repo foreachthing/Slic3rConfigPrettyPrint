@@ -565,22 +565,13 @@ def LaTeXStringFilter(mystring):
 
 
 def runLaTeX():
-    #cmd = ['pdflatex', '-interaction', 'nonstopmode', '-output-directory', dir_path, tplout.name]
-
     scriptdir = os.path.dirname(__file__)
     scriptdir_path = Path(scriptdir).resolve()
-    
     runbatch = str(Path(str(scriptdir_path/'makepdf.bat')))
     texfile = str(Path(tplout.name).resolve())
-
     dir_path2 = str(dir_path)
 
-    # This WORKS!!!
-    #cmd = [runbatch, dir_path2, texfile]
-
     cmd = [ 'pdflatex', '-output-directory', dir_path2, '-interaction=nonstopmode', texfile] 
-
-
 
     for x in range(0, 2):
         proc = subprocess.Popen(cmd)
@@ -612,3 +603,4 @@ try:
     runLaTeX()
 except:
     print('Somme silly snake-error has occured: ' + str(sys.exc_info()[0]))
+
