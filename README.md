@@ -21,6 +21,13 @@ Use these, optional, parameters:
 * -s prints the summary section only
 * -cc|--commentcolor changes the color of gcode comments (default: red)
 
+## Usage in Slic3r
+If you want to use this script as a post-processor (create a pdf automatically with exporting gcode) then use this script as following:
+`C:\Program! Files! (x86)\Python37-32\python.exe c:\dev\SCPP\Slic3rConfigPrettyPrint.py -o --au "John Doe"`
+
+Make sure you don't have a white-space at the end of this string. Otherwise you'll get a syntax error.
+NOTE: before every white-space you'll need an **!**. Whatch closly: `C:\Program! Files! (x86)\`.
+
 ## Examples
 Input: `PROG  mySlicedFile.gcode -t -au "Mister Slic3r"`
 
