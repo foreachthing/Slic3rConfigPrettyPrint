@@ -2,7 +2,7 @@
 Prints the a Configuration-Report of a GCode File sliced with Slic3r
 
 ## REQUIRED
-pdflatex (tested with TexLive 2018) or similar. Make adjustments in the script accordingly:
+pdflatex (tested with TexLive 2018 and MikTex 2.9) or similar. Make adjustments in the script accordingly:
 ```
 def runLaTeX():
  ...
