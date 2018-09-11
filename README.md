@@ -14,14 +14,14 @@ def runLaTeX():
 Just run the script with your GCode-file as first parameter. I.e. `PROG mySlicedFile.gcode`
 
 Use these, optional, parameters:
-* -au|--author define the author of the pdf
-* -b removes the graphic representation of the bed shape
-* -t removes the text (xy coordinates) of the bed shape
-* -bt removes the bed shape completely
-* -g removes all gcode sections
-* -c prints the configuration section only
-* -s prints the summary section only
-* -cc|--commentcolor changes the color of gcode comments (default: red)
+* `-au|--author` define the author of the pdf
+* `-b` removes the graphic representation of the bed shape
+* `-t` removes the text (xy coordinates) of the bed shape
+* `-bt` removes the bed shape completely
+* `-g` removes all gcode sections
+* `-c` prints the configuration section only
+* `-s` prints the summary section only (cannot be used with `-c`)
+* `-cc|--commentcolor` changes the color of gcode comments (default: red)
 
 ## Usage in Slic3r
 If you want to use this script as a post-processor (create a pdf automatically with exporting gcode) then use this script as following:
