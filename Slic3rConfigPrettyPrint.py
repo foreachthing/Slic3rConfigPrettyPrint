@@ -12,6 +12,9 @@ import re  #regex
 import argparse
 import subprocess
 
+# Debug only
+#print(sys.argv)
+
 
 ## ArgumentParser
 parser = argparse.ArgumentParser(
@@ -27,13 +30,15 @@ grpDisable = parser.add_argument_group('Disable printing of ...', 'Note: -b and 
 grpDisable.add_argument('-b', action = 'store_false', default = True, help = 'Bed Shape as graphic')
 grpDisable.add_argument('-t', action = 'store_false', default = True, help = 'Bed Shape as text (xy coordinates)')
 grpDisable.add_argument('-g', action = 'store_false', default = True, help = 'Removes all GCode fields (start, end, filament, layer, etc.)')
+
 #
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-c', action = 'store_true', default = False, help = 'Print configuration section only')
 group.add_argument('-s', action = 'store_true', default = False, help = 'Print summary section only')
 
-parser.add_argument("-cc", "--commentcolor", action='store', type=str, metavar = '[hex]', default = 'ff0000',  help = 'Font color of comments in HEX (default: %(default)s without leading #)')
+parser.add_argument("-cc", "--commentcolor", action='store', type=str, metavar = 'hex', default = 'ff0000',  help = 'Font color of comments in HEX (default: %(default)s without leading #)')
 parser.add_argument('-o', action = 'store_true', default = False, help = 'Open PDF after creation.')
+
 
 if not len(sys.argv) > 1:
     print('\n\n*** WARNING ***\nNo Parameter(s) provided but at least one (GCode-filename) required. \n*** Type "[PROG_NAME] -h" for help ***\nI shall exit here.')
@@ -45,18 +50,20 @@ except IOError as msg:
 
 strAuthor           = args.author
 bbed_shape          = args.b
-bbed_shapetxt       = args.t
-bgcode_fields       = args.g
 bSection_Config     = args.c
+bgcode_fields       = args.g
+bOpenPDF            = args.o
 bSection_Summary    = args.s
+bbed_shapetxt       = args.t
 filename            = Path(str(args.filename))
 strFontCommentColor = args.commentcolor
-bOpenPDF            = args.o
+
 ## END ArgumentParser
 
 ## get and set paths
-dir_path = Path(__file__).resolve().parent
-file_path = Path(filename).parents[0] 
+dir_path = Path(filename).parents[0] 
+pdfname = (Path(filename).stem)
+
 
 # define output files
 out = open(dir_path/'slic3rconfigtable.tex','w')
@@ -68,7 +75,8 @@ outputsummary = Path(str(summ.name))
 bedshp = open(dir_path/'slic3rbedshape.data','w')
 outputbedshape = Path(str(bedshp.name))
  # Main TEX file
-tplout = open(dir_path/'MainPDF.tex','w')
+tplout = open(dir_path/(pdfname+'.tex'),'w')
+outputtplout = Path(str(tplout.name))
  # Main Style file
 styout = open(dir_path/'GCodeSuperStylin.sty','w')
 outputstyle = Path(str(styout.name))
@@ -122,14 +130,14 @@ def main():
                 if (bgcode_fields == False):
                     
                     if lowline.startswith('start_gcode') or lowline.startswith('end_gcode') or lowline.startswith('between_objects_gcode') or lowline.startswith('layer_gcode') or lowline.startswith('before_layer_gcode'):
-                        print('no gcode please')
+                        #print('no gcode please')
                         continue
                     else:
                         processGCodeLines(strLine, lowline, lstCompleteNewLines)
                         continue
 
                 else:
-                    print('more gcode')
+                    #print('more gcode')
                     # SUB HERE
                     processGCodeLines(strLine, lowline, lstCompleteNewLines)
                     continue
@@ -442,101 +450,106 @@ def getSlic3rSummary(arrAllLines):
 
 
 def LaTexStyle():
-
-    styout.write('\\NeedsTeXFormat{LaTeX2e}\n')
-    styout.write('\\ProvidesPackage{'+ str(outputstyle.stem) +'}[2018/8/17 v1.0 '+ str(outputstyle.stem) +']\n')
-    styout.write('\\RequirePackage[utf8]{inputenc}\n')
-    styout.write('\\RequirePackage[T1]{fontenc}\n')
-    styout.write('\\RequirePackage{lmodern}\n')
-    styout.write('\\RequirePackage[includeheadfoot, includehead,heightrounded, left=3cm, right=2cm, top=1.5cm, bottom=1.5cm, footskip=1.7cm]{geometry}\n')
-    styout.write('\\RequirePackage{booktabs}\n')
-    styout.write('\\RequirePackage{ltablex}\n')
-    styout.write('\\RequirePackage{siunitx}\n')
-    styout.write('\\sisetup{detect-weight=true, detect-family=true, round-mode=places, round-precision=1}\n')
-    styout.write('\\RequirePackage{menukeys}\n')
-    styout.write('\\renewmenumacro{\\directory}[/]{pathswithblackfolder}\n')
-    styout.write('\\RequirePackage[justification=justified, singlelinecheck=false, labelfont=bf]{caption}\n')
-    styout.write('\\setlength\\parindent{0pt}\n')
-    styout.write('\\RequirePackage{marginnote}\n')
-    styout.write('\\reversemarginpar\n')
-    styout.write('\\renewcommand*{\\marginfont}{\\footnotesize}\n')
-    styout.write('\\renewcommand*{\\marginnotevadjust}{2pt}\n')
-    styout.write('\\definecolor{color1}{RGB}{0,0,90}\n')
-    styout.write('\\definecolor{color2}{RGB}{0,20,20}\n')
-    if bbed_shape: styout.write('\\definecolor{colbedshape}{RGB}{247,240,221}\n')
-    styout.write('\\usepackage[automark, footsepline, plainfootsepline, headsepline, plainheadsepline]{scrlayer-scrpage}\n')
-    styout.write('\\pagestyle{scrheadings}\n')
-    styout.write('\\ihead{\\huge \\bfseries{Slic3r Report}}\n')
-    styout.write('\\rohead[\\filename{}]{\\filename{}}\n')
-    styout.write('\\lofoot[Slic3r Configuration]{Slic3r Configuration}\n')
-    styout.write('\\rofoot[\\author, \\date]{\\author, \\date}\n')
-    styout.write('\\cohead{}\n')
-    styout.write('\\setkomafont{pageheadfoot}{\\small}\n')
-    styout.write('\\renewcommand\\tableofcontents{\\vspace{-14pt}\\@starttoc{toc}}\n')
-    styout.write('\\newlength{\\tocsep}\n')
-    styout.write('\\setlength\\tocsep{1.5pc} % Sets the indentation of the sections in the table of contents\n')
-    styout.write('\\setcounter{tocdepth}{3} % Three levels in the table of contents section: sections, subsections and subsubsections\n')
-    styout.write('\\RequirePackage{titletoc}\n')
-    styout.write('\\contentsmargin{0cm}\n')
-    styout.write('\\titlecontents{section}[\\tocsep]{\\addvspace{0pt}\\normalsize\\bfseries}{\\contentslabel[\\thecontentslabel]{\\tocsep}}{}{\\dotfill\\thecontentspage}[]\n')
-    styout.write('\\titlecontents{subsection}[2\\tocsep]{\\addvspace{0pt}\\small}{\\contentslabel[\\thecontentslabel]{\\tocsep}}{}{\\ \\titlerule*[.5pc]{.}\\ \\thecontentspage}[]\n')
-    styout.write('\\titlecontents*{subsubsection}[\\tocsep]{\\footnotesize}{}{}{}[\\ \\textbullet\\ ]\n')
-    styout.write('\\definecolor{CommentColor}{HTML}{' + strFontCommentColor + '}')
-    styout.write('\\endinput\n')
+    try:
+        styout.write('\\NeedsTeXFormat{LaTeX2e}\n')
+        styout.write('\\ProvidesPackage{'+ str(outputstyle.stem) +'}[2018/8/17 v1.0 '+ str(outputstyle.stem) +']\n')
+        styout.write('\\RequirePackage[utf8]{inputenc}\n')
+        styout.write('\\RequirePackage[T1]{fontenc}\n')
+        styout.write('\\RequirePackage{lmodern}\n')
+        styout.write('\\RequirePackage[includeheadfoot, includehead,heightrounded, left=3cm, right=2cm, top=1.5cm, bottom=1.5cm, footskip=1.7cm]{geometry}\n')
+        styout.write('\\RequirePackage{booktabs}\n')
+        styout.write('\\RequirePackage{ltablex}\n')
+        styout.write('\\RequirePackage{siunitx}\n')
+        styout.write('\\sisetup{detect-weight=true, detect-family=true, round-mode=places, round-precision=1}\n')
+        styout.write('\\RequirePackage{menukeys}\n')
+        styout.write('\\renewmenumacro{\\directory}[/]{pathswithblackfolder}\n')
+        styout.write('\\RequirePackage[justification=justified, singlelinecheck=false, labelfont=bf]{caption}\n')
+        styout.write('\\setlength\\parindent{0pt}\n')
+        styout.write('\\RequirePackage{marginnote}\n')
+        styout.write('\\reversemarginpar\n')
+        styout.write('\\renewcommand*{\\marginfont}{\\footnotesize}\n')
+        styout.write('\\renewcommand*{\\marginnotevadjust}{2pt}\n')
+        styout.write('\\definecolor{color1}{RGB}{0,0,90}\n')
+        styout.write('\\definecolor{color2}{RGB}{0,20,20}\n')
+        if bbed_shape: styout.write('\\definecolor{colbedshape}{RGB}{247,240,221}\n')
+        styout.write('\\usepackage[automark, footsepline, plainfootsepline, headsepline, plainheadsepline]{scrlayer-scrpage}\n')
+        styout.write('\\pagestyle{scrheadings}\n')
+        styout.write('\\ihead{\\huge \\bfseries{Slic3r Report}}\n')
+        styout.write('\\rohead[\\filename{}]{\\filename{}}\n')
+        styout.write('\\lofoot[Slic3r Configuration]{Slic3r Configuration}\n')
+        styout.write('\\rofoot[\\author, \\date]{\\author, \\date}\n')
+        styout.write('\\cohead{}\n')
+        styout.write('\\setkomafont{pageheadfoot}{\\small}\n')
+        styout.write('\\renewcommand\\tableofcontents{\\vspace{-14pt}\\@starttoc{toc}}\n')
+        styout.write('\\newlength{\\tocsep}\n')
+        styout.write('\\setlength\\tocsep{1.5pc} % Sets the indentation of the sections in the table of contents\n')
+        styout.write('\\setcounter{tocdepth}{3} % Three levels in the table of contents section: sections, subsections and subsubsections\n')
+        styout.write('\\RequirePackage{titletoc}\n')
+        styout.write('\\contentsmargin{0cm}\n')
+        styout.write('\\titlecontents{section}[\\tocsep]{\\addvspace{0pt}\\normalsize\\bfseries}{\\contentslabel[\\thecontentslabel]{\\tocsep}}{}{\\dotfill\\thecontentspage}[]\n')
+        styout.write('\\titlecontents{subsection}[2\\tocsep]{\\addvspace{0pt}\\small}{\\contentslabel[\\thecontentslabel]{\\tocsep}}{}{\\ \\titlerule*[.5pc]{.}\\ \\thecontentspage}[]\n')
+        styout.write('\\titlecontents*{subsubsection}[\\tocsep]{\\footnotesize}{}{}{}[\\ \\textbullet\\ ]\n')
+        styout.write('\\definecolor{CommentColor}{HTML}{' + strFontCommentColor + '}')
+        styout.write('\\endinput\n')
+    except:
+        styout.close()
 
 
 def LaTexTemplate():
+    try:
 
-    tplout.write('\documentclass[ %\n')
-    tplout.write('hyperref,\n')
-    tplout.write('10pt,\n')
-    tplout.write(']{scrartcl}\n')
-    tplout.write('\\def\\filename{' + LaTeXStringFilter(str(filename.stem).title()) + '}\n')
-    tplout.write('\\def\\author{'+ LaTeXStringFilter(strAuthor).title() +'}\n')
-    tplout.write('\\def\\date{\\today}\n')
-    tplout.write('\\usepackage{'+ str(outputstyle.stem) +'}\n')
+        tplout.write('\documentclass[ %\n')
+        tplout.write('hyperref,\n')
+        tplout.write('10pt,\n')
+        tplout.write(']{scrartcl}\n')
+        tplout.write('\\def\\filename{' + LaTeXStringFilter(str(filename.stem).title()) + '}\n')
+        tplout.write('\\def\\author{'+ LaTeXStringFilter(strAuthor).title() +'}\n')
+        tplout.write('\\def\\date{\\today}\n')
+        tplout.write('\\usepackage{'+ str(outputstyle.stem) +'}\n')
 
-    if bbed_shape: 
-        tplout.write('\\usepackage{environ}\n')
-        tplout.write('\\makeatletter\n')
-        tplout.write('\\newsavebox{\\measure@tikzpicture}\n')
-        tplout.write('\\NewEnviron{scaletikzpicturetowidth}[1]{\\def\\tikz@width{#1} \\def\\tikzscale{1}\\begin{lrbox}{\\measure@tikzpicture} \\BODY \\end{lrbox} \\pgfmathparse{#1/\\wd\\measure@tikzpicture} \\edef\\tikzscale{\\pgfmathresult} \\BODY}\n')
-        tplout.write('\makeatother\n')
+        if bbed_shape: 
+            tplout.write('\\usepackage{environ}\n')
+            tplout.write('\\makeatletter\n')
+            tplout.write('\\newsavebox{\\measure@tikzpicture}\n')
+            tplout.write('\\NewEnviron{scaletikzpicturetowidth}[1]{\\def\\tikz@width{#1} \\def\\tikzscale{1}\\begin{lrbox}{\\measure@tikzpicture} \\BODY \\end{lrbox} \\pgfmathparse{#1/\\wd\\measure@tikzpicture} \\edef\\tikzscale{\\pgfmathresult} \\BODY}\n')
+            tplout.write('\makeatother\n')
 
-    tplout.write('\\usepackage{hyperref}\n')
-    tplout.write('\\hypersetup{hidelinks, colorlinks=true, urlcolor=color2, citecolor=color1, linkcolor=color1, pdfauthor={\\author}, pdftitle={\\filename}, pdfsubject = {Slic3r Configuration Report: \\filename.gcode}, pdfcreator={LaTeX with a bunch of packages}, pdfproducer={pdflatex with a dash of Python}}\n')
-    tplout.write('\\begin{document}\n')
-    tplout.write('\\marginnote{Author:} 	{\\author} \\\\[5pt]\n')
-    tplout.write('\\marginnote{Date:} 	    {\\date} \\\\[5pt]\n')
+        tplout.write('\\usepackage{hyperref}\n')
+        tplout.write('\\hypersetup{hidelinks, colorlinks=true, urlcolor=color2, citecolor=color1, linkcolor=color1, pdfauthor={\\author}, pdftitle={\\filename}, pdfsubject = {Slic3r Configuration Report: \\filename.gcode}, pdfcreator={LaTeX with a bunch of packages}, pdfproducer={pdflatex with a dash of Python}}\n')
+        tplout.write('\\begin{document}\n')
+        tplout.write('\\marginnote{Author:} 	{\\author} \\\\[5pt]\n')
+        tplout.write('\\marginnote{Date:} 	    {\\date} \\\\[5pt]\n')
 
-    tplout.write('\\marginnote{File:}  {\\textbf{\\filename} \\newline {\\setlength{\\fboxsep}{4pt}\\setlength{\\fboxrule}{0pt} \\fbox{\\parbox{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}{\\directory[/]{' + LaTeXStringFilter(str(filename.as_posix())) + '}}}}}\\\\[-2pt] \\rule{\\linewidth}{.4pt} \\\\[5pt]\n')
+        tplout.write('\\marginnote{File:}  {\\textbf{\\filename} \\newline {\\setlength{\\fboxsep}{4pt}\\setlength{\\fboxrule}{0pt} \\fbox{\\parbox{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}{\\directory[/]{' + LaTeXStringFilter(str(filename.as_posix())) + '}}}}}\\\\[-2pt] \\rule{\\linewidth}{.4pt} \\\\[5pt]\n')
 
-    # instead \\directory[/] use \\nolinkurl
-    tplout.write('\\marginnote{Content:}    {\\tableofcontents}\n')
-    tplout.write('\\vspace{-8pt}\\rule{\\linewidth}{.4pt}\n')
+        # instead \\directory[/] use \\nolinkurl
+        tplout.write('\\marginnote{Content:}    {\\tableofcontents}\n')
+        tplout.write('\\vspace{-8pt}\\rule{\\linewidth}{.4pt}\n')
     
-    if (bSection_Config == False):
-        tplout.write('\\section{Summary}\n')
-        tplout.write('\\begin{tabularx}{\\linewidth}{@{}p{7.5cm}>{\\bfseries}X@{}}\n')
-        tplout.write('	\\caption{\\filename{} Summary} \\\\[-8pt] &  \\\\ \\toprule\n')
-        tplout.write('	\\textbf{Option} & \\textbf{Value} \\\\ \\midrule\n')
-        tplout.write('	\endhead	\n')
-        tplout.write('		\\input{'+ str(outputsummary.stem) +'.tex}\n')
-        tplout.write('	\\bottomrule\n')
-        tplout.write('\\end{tabularx}\n')
-        tplout.write('\\newpage\n')
+        if (bSection_Config == False):
+            tplout.write('\\section{Summary}\n')
+            tplout.write('\\begin{tabularx}{\\linewidth}{@{}p{7.5cm}>{\\bfseries}X@{}}\n')
+            tplout.write('	\\caption{\\filename{} Summary} \\\\[-8pt] &  \\\\ \\toprule\n')
+            tplout.write('	\\textbf{Option} & \\textbf{Value} \\\\ \\midrule\n')
+            tplout.write('	\endhead	\n')
+            tplout.write('		\\input{'+ str(outputsummary.stem) +'.tex}\n')
+            tplout.write('	\\bottomrule\n')
+            tplout.write('\\end{tabularx}\n')
+            tplout.write('\\newpage\n')
 
-    if (bSection_Summary == False):
-        tplout.write('\\section{Slic3r Configuration}\n')
-        tplout.write('\\begin{tabularx}{\\linewidth}{@{}p{7.5cm}>{\\bfseries}X@{}}\n')
-        tplout.write('	\\caption{\\filename{} Slic3r-Configuration} \\\\[-8pt] &  \\\\ \\toprule\n')
-        tplout.write('	\\textbf{Option} & \\textbf{Value} \\\\ \\midrule\n')
-        tplout.write('	\\endhead	\n')
-        tplout.write('		\\input{'+ str(outputconfig.stem) +'.tex}\n')
-        tplout.write('	\\bottomrule\n')
-        tplout.write('\\end{tabularx}\n')
+        if (bSection_Summary == False):
+            tplout.write('\\section{Slic3r Configuration}\n')
+            tplout.write('\\begin{tabularx}{\\linewidth}{@{}p{7.5cm}>{\\bfseries}X@{}}\n')
+            tplout.write('	\\caption{\\filename{} Slic3r-Configuration} \\\\[-8pt] &  \\\\ \\toprule\n')
+            tplout.write('	\\textbf{Option} & \\textbf{Value} \\\\ \\midrule\n')
+            tplout.write('	\\endhead	\n')
+            tplout.write('		\\input{'+ str(outputconfig.stem) +'.tex}\n')
+            tplout.write('	\\bottomrule\n')
+            tplout.write('\\end{tabularx}\n')
 
-    tplout.write('\\end{document}\n')
+        tplout.write('\\end{document}\n')
+    except:
+        tplout.close()
 
 
 def rn(str):
@@ -552,19 +565,45 @@ def LaTeXStringFilter(mystring):
 
 
 def runLaTeX():
-    cmd = ['pdflatex', '-interaction', 'nonstopmode', tplout.name]
-    proc = subprocess.Popen(cmd)
-    proc.communicate()
-    proc = subprocess.Popen(cmd)
-    proc.communicate()
+    #cmd = ['pdflatex', '-interaction', 'nonstopmode', '-output-directory', dir_path, tplout.name]
 
+    scriptdir = os.path.dirname(__file__)
+    scriptdir_path = Path(scriptdir).resolve()
+    
+    runbatch = str(Path(str(scriptdir_path/'makepdf.bat')))
+    texfile = str(Path(tplout.name).resolve())
+
+    dir_path2 = str(dir_path)
+
+    # This WORKS!!!
+    #cmd = [runbatch, dir_path2, texfile]
+
+    cmd = [ 'pdflatex', '-output-directory', dir_path2, '-interaction=nonstopmode', texfile] 
+
+
+
+    for x in range(0, 2):
+        proc = subprocess.Popen(cmd)
+        proc.communicate()
+    
     retcode = proc.returncode
     if not retcode == 0:
-        os.unlink('MainPDF.pdf')
+        os.unlink(dir_path/(pdfname+'.pdf'))
     else:
         if bOpenPDF:
-            subprocess.Popen('MainPDF.pdf', shell = True)
+            strpdf = str(Path(str(dir_path/(pdfname+'.pdf'))))
+            subprocess.Popen(strpdf, shell = True)
 
+    # TeX cleanup
+    os.unlink(dir_path/(pdfname+'.toc'))
+    os.unlink(dir_path/(pdfname+'.aux'))
+    os.unlink(dir_path/(pdfname+'.log'))
+    os.unlink(dir_path/(pdfname+'.out'))
+    os.unlink(outputbedshape)
+    os.unlink(outputsummary)
+    os.unlink(outputconfig)
+    os.unlink(outputstyle)
+    os.unlink(outputtplout)
 
 
 try:
