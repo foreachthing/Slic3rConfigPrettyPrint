@@ -15,6 +15,8 @@ import subprocess
 # Debug only
 #print(sys.argv)
 
+# Users' Name - hopefully!
+currentusername = os.getenv('username', os.getenv('USER','Unknown')).title()
 
 ## ArgumentParser
 parser = argparse.ArgumentParser(
@@ -24,7 +26,7 @@ parser = argparse.ArgumentParser(
     epilog = '', )
 
 parser.add_argument('filename', nargs = '?', help = 'Filename (GCode-File) to process.')
-parser.add_argument('-au', '--author', metavar = '"Author Name"', default = os.getenv('username').title(), help = 'The Author of the GCode-File (default: %(default)s)')
+parser.add_argument('-au', '--author', metavar = '"Author Name"', default = currentusername, help = 'The Author of the GCode-File (default: %(default)s)')
 #
 grpDisable = parser.add_argument_group('Disable printing of ...', 'Note: -b and -t can be combined as -bt or -tb.')
 grpDisable.add_argument('-b', action = 'store_false', default = True, help = 'Bed Shape as graphic')
