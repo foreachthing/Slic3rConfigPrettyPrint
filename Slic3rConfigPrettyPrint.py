@@ -166,8 +166,8 @@ def main():
     except OSError as err:
         print("OS error: {0}".format(err))
     except:
-        print('Somme silly error has occured: ' + str(sys.exc_info()[0]))
-        out.write('Somme silly error has occured: ' + str(sys.exc_info()[0]))
+        print('Some silly error has occured: ' + str(sys.exc_info()[0]))
+        out.write('Some silly error has occured: ' + str(sys.exc_info()[0]))
         summ.close()
         out.close()
         bedshp.close()
@@ -604,5 +604,5 @@ try:
     main()
     runLaTeX()
 except:
-    print('Somme silly snake-error has occured: ' + str(sys.exc_info()[0]))
+    print('Some silly snake-error has occured: ' + str(sys.exc_info()[0]))
 
