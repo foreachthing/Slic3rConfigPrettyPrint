@@ -1,14 +1,21 @@
 # Slic3rConfigPrettyPrint
-Prints the a Configuration-Report of a GCode File sliced with Slic3r
+Prints the a Configuration-Report of a GCode File sliced with Slic3r.
 
 ## REQUIRED
-pdflatex (tested with TexLive 2018 and MikTex 2.9) or similar. Make adjustments in the script accordingly:
+pdflatex or similar. Make adjustments in the script accordingly:
 ```
 def runLaTeX():
  ...
     cmd = [ 'pdflatex', '-output-directory', dir_path2, '-interaction=nonstopmode', texfile] 
  ...
 ```
+
+Tested with
+* Windows 7 (x64)
+* Windows 8.1 (x64)
+* Ubunut 16.04 LTS
+* TexLive 2018 
+* MikTex 2.9
 
 ## Usage
 Just run the script with your GCode-file as first parameter. I.e. `PROG mySlicedFile.gcode`
@@ -21,7 +28,7 @@ Use these, optional, parameters:
 * `-g` removes all gcode sections
 * `-c` prints the configuration section only
 * `-s` prints the summary section only (cannot be used with `-c`)
-* `-cc|--commentcolor` changes the color of gcode comments (default: red)
+* `-cc|--commentcolor` changes the color of gcode comments, in hex (default: ff0000 = red)
 
 ## Usage in Slic3r
 If you want to use this script as a post-processor (create a pdf automatically with exporting gcode) then use this script as following:
