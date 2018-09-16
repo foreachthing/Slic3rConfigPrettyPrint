@@ -15,10 +15,12 @@ import subprocess
 
 try:
     # Users' Name - hopefully! (Thanks to 7eggert on github)
-    currentusername = ''
-    currentusername = os.getenv('username', os.getenv('USER',' ')).title()
+    currentusername = os.getenv('username', os.getenv('USER','Your Name'))
+    if currentusername is not None: # in case there is no username or USER in this environment: don't .title() it.
+        currentusername.title()
 except:
-    print('Username not found.')
+    print('Username not found. Using Your Name.')
+    currentusername='Your Name'
 
 ## ArgumentParser
 parser = argparse.ArgumentParser(
