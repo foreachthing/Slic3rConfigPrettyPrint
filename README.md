@@ -2,6 +2,25 @@
 Prints the a Configuration-Report of a GCode File sliced with Slic3r.
 
 ## REQUIRED
+### Latex
+Required packages:
+* scrlayer-scrpage
+* environ
+* hyperref
+* inputenc
+* fontenc
+* lmodern
+* geometry
+* booktabs
+* ltablex
+* siunitx
+* menukeys
+* caption
+* marginnote
+* titletoc
+
+Or, you write your own template and adjust the code to fit your needs.
+
 pdflatex or similar. Make adjustments in the script accordingly:
 ```
 def runLaTeX():
@@ -9,13 +28,22 @@ def runLaTeX():
     cmd = [ 'pdflatex', '-output-directory', dir_path2, '-interaction=nonstopmode', texfile] 
  ...
 ```
+### Python
+Written in Python 3.7. Maybe earlier version will work too.
+Required packages:
+* os 
+* sys
+* pathlib
+* re 
+* argparse
+* subprocess
 
-Tested with
+### Tested with
 * Windows 7 (x64)
 * Windows 8.1 (x64)
 * Ubunut 16.04 LTS
-* TexLive 2018 
-* MikTex 2.9
+* TexLive 2018 (full install)
+* MikTex 2.9 (auto install missing packages)
 
 ## Usage
 Just run the script with your GCode-file as first parameter. I.e. `PROG mySlicedFile.gcode`
