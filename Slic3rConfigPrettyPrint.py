@@ -152,7 +152,7 @@ def main():
  
             lowline = strLine.lower()
 
-            if lowline.startswith('start_gcode') or lowline.startswith('end_gcode') or lowline.startswith('between_objects_gcode') or lowline.startswith('layer_gcode') or lowline.startswith('before_layer_gcode') or lowline.startswith('post_process') or lowline.startswith('bed_shape') or lowline.startswith('notes') or lowline.startswith('printer_notes') or lowline.startswith('filament_notes'):
+            if lowline.startswith('start_gcode') or lowline.startswith('end_gcode') or lowline.startswith('between_objects_gcode') or lowline.startswith('layer_gcode') or lowline.startswith('before_layer_gcode') or lowline.startswith('post_process') or lowline.startswith('bed_shape') or lowline.startswith('notes') or lowline.startswith('printer_notes') or lowline.startswith('filament_notes') or lowline.startswith('end_filament_gcode') or lowline.startswith('start_filament_gcode'):
                 if (bgcode_fields == False):
                     
                     if lowline.startswith('start_gcode') or lowline.startswith('end_gcode') or lowline.startswith('between_objects_gcode') or lowline.startswith('layer_gcode') or lowline.startswith('before_layer_gcode'):
