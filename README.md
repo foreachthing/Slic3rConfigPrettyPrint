@@ -19,6 +19,15 @@ Required packages:
 * marginnote
 * titletoc
 
+Additional packges on Debian-Jessie required (~ 550 MB):
+* xstring 
+* etoolbox
+* adjustbox
+* collectbox
+* relsize
+* trimspaces
+* l3kernel
+
 Or, you write your own template and adjust the code to fit your needs.
 
 pdflatex or similar. Make adjustments in the script accordingly:
