@@ -3,6 +3,13 @@ Prints the a Configuration-Report of a GCode File sliced with Slic3r.
 
 ## REQUIRED
 ### Latex
+* pdflatex or similar (xelatex may work). Make adjustments in the script accordingly:
+```
+def runLaTeX():
+ ...
+    cmd = [ 'pdflatex', '-output-directory', dir_path2, '-interaction=nonstopmode', texfile] 
+ ...
+```
 Required packages:
 * scrlayer-scrpage
 * environ
@@ -28,15 +35,8 @@ Additional packges on Debian-Jessie required (~ 550 MB):
 * trimspaces
 * l3kernel
 
-Or, you write your own template and adjust the code to fit your needs.
 
-pdflatex or similar. Make adjustments in the script accordingly:
-```
-def runLaTeX():
- ...
-    cmd = [ 'pdflatex', '-output-directory', dir_path2, '-interaction=nonstopmode', texfile] 
- ...
-```
+
 ### Python
 Written in Python 3.7. Maybe earlier version will work too.
 Required packages:
