@@ -16,8 +16,6 @@ import subprocess
 try:
     # Users' Name - hopefully! (Thanks to 7eggert on github)
     currentusername = os.getenv('username', os.getenv('USER','Your Name'))
-    if currentusername is not None: # in case there is no username or USER in this environment: don't .title() it.
-        currentusername.title()
 except:
     print('Username not found. Using Your Name.')
     currentusername='Your Name'
@@ -526,8 +524,8 @@ def LaTexTemplate():
         tplout.write('hyperref,\n')
         tplout.write('10pt,\n')
         tplout.write(']{scrartcl}\n')
-        tplout.write('\\def\\filename{' + LaTeXStringFilter(pdfname).title() + '.gcode}\n')
-        tplout.write('\\def\\author{'+ LaTeXStringFilter(strAuthor).title() +'}\n')
+        tplout.write('\\def\\filename{' + LaTeXStringFilter(pdfname) + '.gcode}\n')
+        tplout.write('\\def\\author{'+ LaTeXStringFilter(strAuthor) +'}\n')
         tplout.write('\\def\\date{\\today}\n')
         tplout.write('\\usepackage{'+ str(outputstyle.stem) +'}\n')
 
