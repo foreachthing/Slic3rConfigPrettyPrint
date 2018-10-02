@@ -13,12 +13,14 @@ import argparse
 import subprocess
 
 
-try:
-    # Users' Name - hopefully! (Thanks to 7eggert on github)
-    currentusername = os.getenv('username', os.getenv('USER','Your Name'))
-except:
-    print('Username not found. Using Your Name.')
-    currentusername='Your Name'
+# Users' Name - hopefully! (Thanks to 7eggert on github)
+# If nothing was found, use 'Add Your Name' to let the user know it can be changed.
+for name in ('USERNAME', 'LOGNAME', 'LNAME', 'USER'):
+        currentusername = os.environ.get(name)
+        if currentusername:
+            break
+        else:
+            currentusername = 'Add Your Name'
 
 ## ArgumentParser
 parser = argparse.ArgumentParser(
@@ -68,7 +70,6 @@ if os.name == 'nt':
     ## get and set paths
     dir_path = Path(myABSPath).parents[0] 
     pdfname = Path(filename).stem
-
     # define output files
     out = open(dir_path/'slic3rconfigtable.tex', 'w')
     outputconfig = PureWindowsPath(str(out.name))
@@ -89,7 +90,6 @@ else:
     ## get and set paths
     dir_path = PurePosixPath(myABSPath).parent
     pdfname = Path(filename).stem
-
     # define output files
     out = open(str(dir_path/'slic3rconfigtable.tex'), 'w')
     outputconfig = Path(str(out.name))
@@ -262,9 +262,9 @@ def processBedShape(bsline):
         x = float(val[0].strip())
         y = float(val[1].strip())
 
-        # 0.05 is almost zero. 0.000005 is more than close enough to be zero.
-        if x< .1 and x >- .1: x = 0
-        if y< .1 and y >- .1: y = 0
+        # +-0.1 is close enough to be zero.
+        if x < 0.1 and x > -0.1: x = 0
+        if y < 0.1 and y > -0.1: y = 0
 
         # check for min and max
         if x < gridxmin: gridxmin = x
@@ -415,7 +415,6 @@ def processSubSummaryline(sline):
     return sline
 
 
-
 # Process PostProcessors
 def processPostProcessLines(mylowline, mysubline):
     rgx = r"\"(.*)\""
@@ -462,7 +461,6 @@ def getSlic3rSummary(arrAllLines):
         if l >= 1:
             lstNewLines.append(filalins)
             #print(filalins)
-        
             if l >= 1: l += 1
         if l > 4: break
 
@@ -492,7 +490,10 @@ def LaTexStyle():
         styout.write('\\definecolor{color1}{RGB}{0,0,90}\n')
         styout.write('\\definecolor{color2}{RGB}{0,20,20}\n')
         styout.write('\\definecolor{CommentColor}{HTML}{' + strFontCommentColor.upper() + '}\n')
-        if bbed_shape: styout.write('\\definecolor{colbedshape}{RGB}{247,240,221}\n')
+
+        if bbed_shape:
+            styout.write('\\definecolor{colbedshape}{RGB}{247,240,221}\n')
+
         styout.write('\\usepackage[automark, footsepline, plainfootsepline, headsepline, plainheadsepline]{scrlayer-scrpage}\n')
         styout.write('\\pagestyle{scrheadings}\n')
         styout.write('\\ihead{\\huge \\bfseries{Slic3r Report}}\n')
@@ -512,8 +513,6 @@ def LaTexStyle():
         styout.write('\\titlecontents*{subsubsection}[\\tocsep]{\\footnotesize}{}{}{}[\\ \\textbullet\\ ]\n')
         styout.write('\n\\endinput\n')
     except Exception as ex:
-        styout.close()
-
         print (str(ex))
         
 
@@ -572,8 +571,8 @@ def LaTexTemplate():
         tplout.write('\\end{document}\n')
 
     except Exception as ex:
-        tplout.close()
         print (str(ex))
+
         
 
 def rn(str):
