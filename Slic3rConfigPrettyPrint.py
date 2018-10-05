@@ -1,12 +1,12 @@
+"""Creates a Package to be used in TeX and a CWL file for TeXstudio."""
 #!/usr/bin/python
 
-#TODO:
-# Filament usage in Meter
+#TODO: Filament usage in Meter
 
-import os 
-from os import path
+import os
+# from os import path
 import sys
-import pathlib
+# import pathlib
 from pathlib import Path, PureWindowsPath, PurePosixPath
 import re  #regex
 import argparse
@@ -16,373 +16,412 @@ import subprocess
 # Users' Name - hopefully! (Thanks to 7eggert on github)
 # If nothing was found, use 'Add Your Name' to let the user know it can be changed.
 for name in ('USERNAME', 'LOGNAME', 'LNAME', 'USER'):
-        currentusername = os.environ.get(name)
-        if currentusername:
-            break
-        else:
-            currentusername = 'Add Your Name'
+    currentusername = os.environ.get(name)
+    if currentusername:
+        break
+    else:
+        currentusername = 'Add Your Name'
 
 ## ArgumentParser
-parser = argparse.ArgumentParser(
-    prog = os.path.basename(__file__),
-    description = 'Change the option prefix characters', 
-    prefix_chars = '-+/',
-    epilog = '', )
+PARSER = argparse.ArgumentParser(
+    prog=os.path.basename(__file__),
+    description='Change the option prefix characters',
+    prefix_chars='-+/',
+    epilog='')
 
-parser.add_argument('filename', nargs = '?', help = 'Filename (GCode-File) to process.')
-parser.add_argument('-au', '--author', metavar = '"Author Name"', default = currentusername, help = 'The Author of the GCode-File (default: %(default)s)')
+PARSER.add_argument('filename', nargs='?', help='Filename (GCode-File) to process.')
+PARSER.add_argument('-au', '--author', metavar='"Author Name"', \
+    default=currentusername, help='The Author of the GCode-File (default: %(default)s)')
 #
-grpDisable = parser.add_argument_group('Disable printing of ...', 'Note: -b and -t can be combined as -bt or -tb.')
-grpDisable.add_argument('-b', action = 'store_false', default = True, help = 'Bed Shape as graphic')
-grpDisable.add_argument('-t', action = 'store_false', default = True, help = 'Bed Shape as text (xy coordinates)')
-grpDisable.add_argument('-g', action = 'store_false', default = True, help = 'Removes all GCode fields (start, end, filament, layer, etc.)')
+GRP_DISABLE = PARSER.add_argument_group('Disable printing of ...', \
+    'Note: -b and -t can be combined as -bt or -tb.')
+GRP_DISABLE.add_argument('-b', action='store_false', \
+    default=True, help='Bed Shape as graphic')
+GRP_DISABLE.add_argument('-t', action='store_false', \
+    default=True, help='Bed Shape as text (xy coordinates)')
+GRP_DISABLE.add_argument('-g', action='store_false', \
+    default=True, help='Removes all GCode fields (start, end, filament, layer, etc.)')
 #
-group = parser.add_mutually_exclusive_group()
-group.add_argument('-c', action = 'store_true', default = False, help = 'Print configuration section only')
-group.add_argument('-s', action = 'store_true', default = False, help = 'Print summary section only')
+GRP_EXCLUSIV = PARSER.add_mutually_exclusive_group()
+GRP_EXCLUSIV.add_argument('-c', action='store_true', \
+    default=False, help='Print configuration section only')
+GRP_EXCLUSIV.add_argument('-s', action='store_true', \
+    default=False, help='Print summary section only')
 #
-parser.add_argument('-cc', '--commentcolor', action='store', type=str, metavar = 'hex', default = 'FF0000',  help = 'Font color of comments in HEX (default: %(default)s without leading #)')
-parser.add_argument('-o', action = 'store_true', default = False, help = 'Open PDF after creation (does not work in Linux).')
+PARSER.add_argument('-cc', '--commentcolor', action='store', type=str, metavar='hex', \
+    default='FF0000', help='Font color of comments in HEX (default: %(default)s without leading #)')
+PARSER.add_argument('-o', action='store_true', default=False, \
+    help='Open PDF after creation (does not work in Linux).')
 
-if not len(sys.argv) > 1:
-    print('\n\n*** WARNING ***\nNo Parameter(s) provided but at least one (GCode-filename) required. \n*** Type "[PROG_NAME] -h" for help ***\nI shall exit here.')
+if len(sys.argv) <= 1:
+    print('\n\n*** WARNING ***\nNo Parameter(s) provided but at least one \
+        (GCode-filename) required. \n*** Type "[PROG_NAME] -h" for help ***\nI shall exit here.')
     exit(1)
 try:
-    args = parser.parse_args()
+    ARGS = PARSER.parse_args()
 except IOError as msg:
-    parser.error(str(msg))
+    PARSER.error(str(msg))
 
-strAuthor           = args.author
-bbed_shape          = args.b
-bSection_Config     = args.c
-bgcode_fields       = args.g
-bOpenPDF            = args.o
-bSection_Summary    = args.s
-bbed_shapetxt       = args.t
-filename            = args.filename
-strFontCommentColor = args.commentcolor
+AUTHOR_NAME = ARGS.author
+BED_SHAPE = ARGS.b
+SECTION_CONFIG = ARGS.c
+GCODE_FIELDS = ARGS.g
+OPEN_PDF = ARGS.o
+SECTION_SUMMARY = ARGS.s
+BED_SHAPETEXT = ARGS.t
+FILENAME = ARGS.filename
+FONT_COMMENT_COLOR = ARGS.commentcolor.upper() # Needs to be upper-case
 ## END ArgumentParser
 
 # Absolute path of gcode-file
-myABSPath = os.path.abspath(filename)
+ABSOLUTE_PATH = os.path.abspath(FILENAME)
 
 if os.name == 'nt':
     ## get and set paths
-    dir_path = Path(myABSPath).parents[0] 
-    pdfname = Path(filename).stem
+    DIR_PATH = Path(ABSOLUTE_PATH).parents[0]
+    PDF_NAME = Path(FILENAME).stem
     # define output files
-    out = open(dir_path/'slic3rconfigtable.tex', 'w')
-    outputconfig = PureWindowsPath(str(out.name))
+    TEXOUT_FILE = open(DIR_PATH/'slic3rconfigtable.tex', 'w')
+    OUTPUTCONFIG = PureWindowsPath(str(TEXOUT_FILE.name))
      # Summary
-    summ = open(dir_path/'slic3rsummary.tex', 'w')
-    outputsummary = PureWindowsPath(str(summ.name))
+    SUMMARY_FILE = open(DIR_PATH/'slic3rsummary.tex', 'w')
+    OUTPUTSUMMARY = PureWindowsPath(str(SUMMARY_FILE.name))
      # Bedshape
-    bedshp = open(dir_path/'slic3rbedshape.data', 'w')
-    outputbedshape = PureWindowsPath(str(bedshp.name))
+    BEDSHAPE_FILE = open(DIR_PATH/'slic3rbedshape.data', 'w')
+    OUTPUTBEDSHAPE = PureWindowsPath(str(BEDSHAPE_FILE.name))
      # Main TEX file
-    tplout = open(dir_path/(pdfname+'.tex'), 'w')
-    outputtplout = PureWindowsPath(str(tplout.name))
+    TPLOUT_FILE = open(DIR_PATH/(PDF_NAME+'.tex'), 'w')
+    OUTPUTTPLOUT = PureWindowsPath(str(TPLOUT_FILE.name))
      # Main Style file
-    styout = open(dir_path/'GCodeSuperStylin.sty', 'w')
-    outputstyle = PureWindowsPath(str(styout.name))
+    STYOUT_FILE = open(DIR_PATH/'GCodeSuperStylin.sty', 'w')
+    OUTPUTSTYLE = PureWindowsPath(str(STYOUT_FILE.name))
 
 else:
     ## get and set paths
-    dir_path = PurePosixPath(myABSPath).parent
-    pdfname = Path(filename).stem
+    DIR_PATH = PurePosixPath(ABSOLUTE_PATH).parent
+    PDF_NAME = Path(FILENAME).stem
     # define output files
-    out = open(str(dir_path/'slic3rconfigtable.tex'), 'w')
-    outputconfig = Path(str(out.name))
+    TEXOUT_FILE = open(str(DIR_PATH/'slic3rconfigtable.tex'), 'w')
+    OUTPUTCONFIG = Path(str(TEXOUT_FILE.name))
      # Summary
-    summ = open(str(dir_path/'slic3rsummary.tex'), 'w')
-    outputsummary = Path(str(summ.name))
+    SUMMARY_FILE = open(str(DIR_PATH/'slic3rsummary.tex'), 'w')
+    OUTPUTSUMMARY = Path(str(SUMMARY_FILE.name))
      # Bedshape
-    bedshp = open(str(dir_path/'slic3rbedshape.data'), 'w')
-    outputbedshape = Path(str(bedshp.name))
+    BEDSHAPE_FILE = open(str(DIR_PATH/'slic3rbedshape.data'), 'w')
+    OUTPUTBEDSHAPE = Path(str(BEDSHAPE_FILE.name))
      # Main TEX file
-    tplout = open(str(dir_path/(pdfname+'.tex')), 'w')
-    outputtplout = Path(str(tplout.name))
+    TPLOUT_FILE = open(str(DIR_PATH/(PDF_NAME+'.tex')), 'w')
+    OUTPUTTPLOUT = Path(str(TPLOUT_FILE.name))
      # Main Style file
-    styout = open(str(dir_path/'GCodeSuperStylin.sty'), 'w')
-    outputstyle = Path(str(styout.name))
+    STYOUT_FILE = open(str(DIR_PATH/'GCodeSuperStylin.sty'), 'w')
+    OUTPUTSTYLE = Path(str(STYOUT_FILE.name))
 
 # global vars for grid in bed shape
-gridxmin = float(0)
-gridxmax = float(0)
-gridymin = float(0)
-gridymax = float(0)
+GRIDXMIN = float(0)
+GRIDXMAX = float(0)
+GRIDYMIN = float(0)
+GRIDYMAX = float(0)
 
 def main():
-
+    """Main Process"""
     # if no file specified, exit! If it comes to that ...
-    if str(filename).lower() == 'none':
+    if str(FILENAME).lower() == 'none':
         print('No Parameter for "filename" provided. I shall exit here.')
         exit(1)
-      
-    myGCODEfile = open(filename, 'r')
-    mylines = myGCODEfile.readlines()
-    myGCODEfile.close()
+
+    gcode_file = open(FILENAME, 'r')
+    gcode_lines = gcode_file.readlines()
+    gcode_file.close()
 
     # main list
-    lstCompleteNewLines=list()
-    
-    try:    
-        strFirstLine = mylines[0] # Slic3r Info      
+    list_completenewlines = list()
+
+    try:
+        # first_line = gcode_lines[0] # Slic3r Info
 
         # reverse it and stop at the first empty line
-        mylines.reverse()
-        i=0
+        gcode_lines.reverse()
+        # i = 0
 
-        for strLine in mylines:
+        for str_line in gcode_lines:
 
-            if strLine.startswith('\n') or strLine.strip() == '':
+            if str_line.startswith('\n') or str_line.strip() == '':
                 break
-            if '\n' in strLine:
-                strLine = rn(strLine)
-            if '\\n' in strLine and not strLine.endswith('\n'):
-                strLine = strLine.replace('\\n',' \\n ')
+            if '\n' in str_line:
+                str_line = rn_replace(str_line)
+            if '\\n' in str_line and not str_line.endswith('\n'):
+                str_line = str_line.replace('\\n', ' \\n ')
 
-            strLine=strLine.replace('; ','',1) # replace only first occurence
+            str_line = str_line.replace('; ', '', 1) # replace only first occurence
 
             ## Some more replacements for LaTeX
-            strLine = strLine.replace('%','\\%')
-            strLine = strLine.replace('#','\\#')
-            strLine = strLine.replace('[','{[')
-            strLine = strLine.replace(']',']}')
- 
-            lowline = strLine.lower()
+            str_line = str_line.replace('%', '\\%')
+            str_line = str_line.replace('#', '\\#')
+            str_line = str_line.replace('[', '{[')
+            str_line = str_line.replace(']', ']}')
+            lowline = str_line.lower()
 
-            if lowline.startswith('start_gcode') or lowline.startswith('end_gcode') or lowline.startswith('between_objects_gcode') or lowline.startswith('layer_gcode') or lowline.startswith('before_layer_gcode') or lowline.startswith('post_process') or lowline.startswith('bed_shape') or lowline.startswith('notes') or lowline.startswith('printer_notes') or lowline.startswith('filament_notes') or lowline.startswith('end_filament_gcode') or lowline.startswith('start_filament_gcode'):
-                if (bgcode_fields == False):
-                    
-                    if lowline.startswith('start_gcode') or lowline.startswith('end_gcode') or lowline.startswith('between_objects_gcode') or lowline.startswith('layer_gcode') or lowline.startswith('before_layer_gcode'):
+            if (lowline.startswith('start_gcode') or lowline.startswith('end_gcode')
+                    or lowline.startswith('between_objects_gcode')
+                    or lowline.startswith('layer_gcode')
+                    or lowline.startswith('before_layer_gcode')
+                    or lowline.startswith('post_process')
+                    or lowline.startswith('bed_shape')
+                    or lowline.startswith('notes')
+                    or lowline.startswith('printer_notes')
+                    or lowline.startswith('filament_notes')
+                    or lowline.startswith('end_filament_gcode')
+                    or lowline.startswith('start_filament_gcode')):
+                if GCODE_FIELDS is False:
+                    if (lowline.startswith('start_gcode')
+                            or lowline.startswith('end_gcode')
+                            or lowline.startswith('between_objects_gcode')
+                            or lowline.startswith('layer_gcode')
+                            or lowline.startswith('before_layer_gcode')):
                         #print('no gcode please')
                         continue
                     else:
-                        processGCodeLines(strLine, lowline, lstCompleteNewLines)
+                        processgcodelines(str_line, lowline, list_completenewlines)
                         continue
 
                 else:
-                    processGCodeLines(strLine, lowline, lstCompleteNewLines)
+                    processgcodelines(str_line, lowline, list_completenewlines)
                     continue
 
-            spline = strLine.split('=')
-            
-            strFirst = spline[0].title().replace('_',' ')
-            strSecond = LaTeXStringFilter(spline[1])
+            spline = str_line.split('=')
 
-            lstCompleteNewLines.append('{0} \\dotfill  & {1} \\\\\n'.format(strFirst, strSecond))
-        
+            str_first = spline[0].title().replace('_', ' ')
+            str_second = latexstringfilter(spline[1])
+
+            list_completenewlines.append('{0} \\dotfill  \
+                & {1} \\\\\n'.format(str_first, str_second))
+
         # make LaTeX files
-        mylines.reverse()
-        arrAllLines = getSlic3rSummary(mylines)
-        makeLaTeXSummary(lstCompleteNewLines, arrAllLines)
+        gcode_lines.reverse()
+        arr_alllines = getslic3rsummary(gcode_lines)
+        makelatexsummary(list_completenewlines, arr_alllines)
 
-        LaTexTemplate()
-        LaTexStyle()
+        latextemplate()
+        latexstyle()
 
     except OSError as err:
-        print('OS error: {0} in {1}\n{2}'.format(err, err.filename, err.message))
+        print('OS error: {0} in {1}'.format(err, err.filename))
     except Exception as ex:
-        print (str(ex))
-        out.write(str(ex))
+        print(str(ex))
+        TEXOUT_FILE.write(str(ex))
 
-        summ.close()
-        out.close()
-        bedshp.close()
-        tplout.close()
-        styout.close()
+        SUMMARY_FILE.close()
+        TEXOUT_FILE.close()
+        BEDSHAPE_FILE.close()
+        TPLOUT_FILE.close()
+        STYOUT_FILE.close()
     else:
-        summ.close()
-        out.close()
-        bedshp.close()
-        tplout.close()
-        styout.close()
+        SUMMARY_FILE.close()
+        TEXOUT_FILE.close()
+        BEDSHAPE_FILE.close()
+        TPLOUT_FILE.close()
+        STYOUT_FILE.close()
 
 
-def processGCodeLines(strLine, lowline, lstCompleteNewLines):
+def processgcodelines(str_line, lowline, list_completenewlines):
+    """Process all GCode lines"""
     if lowline.startswith('bed_shape'):
-        strXYs = processBedShape(lowline)
-        
-        if bbed_shape:
+        strxys = processbedshape(lowline)
+
+        if BED_SHAPE:
             addtext = ''
-            if bbed_shapetxt == False:
+            if BED_SHAPETEXT is False:
                 addtext = 'Bed Shape & \\\\\n'
 
-            # make a graphical representation of the bed shape - if desired
-            bedgraph = addtext +' & \\begin{scaletikzpicturetowidth}{\\linewidth}\\begin{tikzpicture}[scale=\\tikzscale]\\path[line width=0.5mm, draw=black, fill=colbedshape] plot file {'+ str(outputbedshape.name) +'};\\draw[step=10, color=gray] ('+ str(gridxmin) +', '+ str(gridymin) +') grid ('+ str(gridxmax) +', '+ str(gridymax) +');\\end{tikzpicture}\\end{scaletikzpicturetowidth} \\\\\n'
-            lstCompleteNewLines.append(bedgraph)
+            # make a graphical representation of the bed shape
+            bedgraph = addtext +' & \\begin{scaletikzpicturetowidth}{\\linewidth}\
+                \\begin{tikzpicture}[scale=\\tikzscale]\
+                \\path[line width=0.5mm, draw=black, fill=colbedshape] \
+                plot file {'+ str(OUTPUTBEDSHAPE.name) +'};\
+                \\draw[step=10, color=gray] ('+ str(GRIDXMIN) +',\
+                '+ str(GRIDYMIN) +') grid ('+ str(GRIDXMAX) +', '+ str(GRIDYMAX)\
+                +');\\end{tikzpicture}\\end{scaletikzpicturetowidth} \\\\\n'
+            list_completenewlines.append(bedgraph)
 
-        if bbed_shapetxt:
-            lstCompleteNewLines.append(strXYs)
+        if BED_SHAPETEXT:
+            list_completenewlines.append(strxys)
 
     else:
-            
+
         # remove tabs and replace with space
-        strLine = strLine.replace('\t',' ')
+        str_line = str_line.replace('\t', ' ')
 
         # make a list, so it can be reversed before reversing - wow! Yeah! I know!
-        lstSublines = list()
+        lstsublines = list()
 
         # split line by the equal sign
-        sublines = strLine.split('=')[1].split('\\n')
-        
-        tmpsubl = processPostProcessLines(lowline,sublines[0])
-        lstSublines.append('{0}: & \\\\\n'.format(strLine.split('=')[0].title().replace('_',' ')))
+        sublines = str_line.split('=')[1].split('\\n')
 
-        if len(sublines) > 0:
+        # tmpsubl = processpostprocesslines(lowline, sublines[0])
+        lstsublines.append('{0}: & \\\\\n'.format(str_line.split('=')[0].title().replace('_', ' ')))
+
+        if sublines:
             for subline in sublines:
-                subline = processPostProcessLines(lowline, subline)
-                
+                subline = processpostprocesslines(lowline, subline)
+
                 if ';' in subline:
-                    strSecSplits = subline.split('; ')
-                    subline = strSecSplits[0] + ' ; {\\color{CommentColor} ' + strSecSplits[1] + ' }'
-                       
-                lstSublines.append('\\multicolumn{2}{p{\\linewidth}}{\\bfseries\\ttfamily '+ subline +'} \\\\\n')
-                            
+                    strsecsplits = subline.split('; ')
+                    subline = strsecsplits[0] + ' ; \
+                        {\\color{CommentColor} ' + strsecsplits[1] + ' }'
+
+                lstsublines.append('\\multicolumn{2}{p{\
+                    \\linewidth}}{\\bfseries\\ttfamily '+ subline +'} \\\\\n')
+
         # reverse it (-1)
-        lstSublines.reverse()
-        lstCompleteNewLines.extend(lstSublines)
+        lstsublines.reverse()
+        list_completenewlines.extend(lstsublines)
 
 
-def processBedShape(bsline):
+def processbedshape(bsline):
+    """Process the Bed Shape and prepare everything to be printed as graphics"""
+    global GRIDXMIN
+    global GRIDXMAX
+    global GRIDYMIN
+    global GRIDYMAX
 
-    global gridxmin
-    global gridxmax
-    global gridymin
-    global gridymax
-
-    bsline = rn(bsline)
+    bsline = rn_replace(bsline)
     values = bsline.split('=')[1].split(',')
-    xy = list()
+    xy_list = list()
 
     for value in values:
         val = value.split('x')
 
-        x = float(val[0].strip())
-        y = float(val[1].strip())
+        x_coord = float(val[0].strip())
+        y_coord = float(val[1].strip())
 
         # +-0.1 is close enough to be zero.
-        if x < 0.1 and x > -0.1: x = 0
-        if y < 0.1 and y > -0.1: y = 0
+        if   0.1 > x_coord < -0.1:
+            x_coord = 0
+        if  0.1 > y_coord < -0.1:
+            y_coord = 0
 
         # check for min and max
-        if x < gridxmin: gridxmin = x
-        if y < gridymin: gridymin = y
-        if x > gridxmax: gridxmax = x
-        if y > gridymax: gridymax = y        
+        if x_coord < GRIDXMIN:
+            GRIDXMIN = x_coord
+        if y_coord < GRIDYMIN:
+            GRIDYMIN = y_coord
+        if x_coord > GRIDXMAX:
+            GRIDXMAX = x_coord
+        if y_coord > GRIDYMAX:
+            GRIDYMAX = y_coord
 
-        bedshp.write(str(x) + ' ' + str(y) + '\n')
-        xy.append('\\mbox{\\num{' + str(x) + '}$\\times$\\num{' + str(y) + '}}, ')
-    
+        BEDSHAPE_FILE.write(str(x_coord) + ' ' + str(y_coord) + '\n')
+        xy_list.append('\\mbox{\\num{' + str(x_coord) + '}$\\times$\\num{' + str(y_coord) + '}}, ')
+
     # remove the last ,  and replace it with a .
-    if xy[-1].endswith(', '):
-        xy[-1] = xy[-1][:-2] + '.'
-        
-    strFirstLine = '{0} &   \\\\\n'.format('Bed Shape')
-    
+    if xy_list[-1].endswith(', '):
+        xy_list[-1] = xy_list[-1][:-2] + '.'
+
+    first_line = '{0} &   \\\\\n'.format('Bed Shape')
+
     myxystr = ''
-    for allxy in xy:
-        myxystr = myxystr + ' ' + allxy 
+    for allxy in xy_list:
+        myxystr = myxystr + ' ' + allxy
 
     myxystr = '\\multicolumn{2}{p{\\linewidth}}{\\bfseries '+ myxystr +'} \\\\\n '
 
-    return strFirstLine+myxystr
+    return first_line+myxystr
 
 
 # make LaTeX main file
-def makeLaTeXSummary(lstCompleteNewLines, lstSummary):
-
+def makelatexsummary(list_completenewlines, lstsummary):
+    """Print GCODE-Summary"""
     keepline = False
-    strKeeper = ''
-    lstKeepers = list()
-    c = 0
-    i = 0
-    cf = 0
+    strkeeper = ''
+    list_keepers = list()
+    c_count = 0
+    cf_count = 0
 
     # START of LaTeX file
-    for sumline in lstSummary:
+    for sumline in lstsummary:
         lowline = sumline.lower()
-        c = c + 1
-        i = i + 1
+        c_count = c_count + 1
 
         # messy but it works - so don't hit me, please.
-        if 'generated' in lowline :
-            sumline = sumline.replace(':','.')
-            lstKeepers.append('Generated by: & ' + sumline.split('by')[1] + ' \\\\\n')
+        if 'generated' in lowline:
+            sumline = sumline.replace(':', '.')
+            list_keepers.append('Generated by: & ' + sumline.split('by')[1] + ' \\\\\n')
         elif 'part index' in lowline or 'filament usage' in lowline:
-            lstKeepers.append('\n')
-            lstKeepers.append('\\multicolumn{2}{l}{\\rule{0pt}{4ex}\\textbf{' + sumline + '}}\\\\\n')
-            if lowline.startswith('filament usage'):cf += 1
-        elif len(lowline) == 0 :
+            list_keepers.append('\n')
+            list_keepers.append('\\multicolumn{2}{l}{\
+                \\rule{0pt}{4ex}\\textbf{' + sumline + '}}\\\\\n')
+            if lowline.startswith('filament usage'):
+                cf_count += 1
+        elif not lowline:
             keepline = False
-            strKeeper = ''
-        elif ':' in lowline and keepline == False:
+            strkeeper = ''
+        elif ':' in lowline and keepline is False:
             keepline = True
-            strKeeper = sumline
-            c = 0
-        elif keepline == True:
-            if c == 1:
-                lstKeepers.append( strKeeper + ' & ' + sumline + ' \\\\\n')
+            strkeeper = sumline
+            c_count = 0
+        elif keepline is True:
+            if c_count == 1:
+                list_keepers.append(strkeeper + ' & ' + sumline + ' \\\\\n')
             else:
-                lstKeepers.append(  ' & ' + sumline + ' \\\\\n')
+                list_keepers.append(' & ' + sumline + ' \\\\\n')
         elif 'width =' in lowline:
-            lstKeepers.append(processSubSummaryline(sumline))
-        elif cf >= 1:
-            if cf >= 1:
-                fili = processFilamentLine(sumline)
-                lstKeepers.append(fili)                
-            cf += 1
-            if cf > 5: cf = 0
-            
-    for lnkeeper in lstKeepers:
-        summ.write(LaTeXStringFilter(lnkeeper))
+            list_keepers.append(processsubsummaryline(sumline))
+        elif cf_count >= 1:
+            if cf_count >= 1:
+                fili = processfilamentline(sumline)
+                list_keepers.append(fili)
+            cf_count += 1
+            if cf_count > 5:
+                cf_count = 0
 
-    summ.write('\\endinput\n\n')
+    for lnkeeper in list_keepers:
+        SUMMARY_FILE.write(latexstringfilter(lnkeeper))
+
+    SUMMARY_FILE.write('\\endinput\n\n')
 
     # un-reverse it (1) and write output to file
-    lstCompleteNewLines.reverse()
-    for newline in lstCompleteNewLines:
-        out.write(newline)
+    list_completenewlines.reverse()
+    for newline in list_completenewlines:
+        TEXOUT_FILE.write(newline)
 
-    out.write('\\endinput\n\n')
+    TEXOUT_FILE.write('\\endinput\n\n')
 
 
-def processFilamentLine(fline):
-
-    fline = rn(fline)
+def processfilamentline(fline):
+    """Process Filament info"""
+    fline = rn_replace(fline)
 
     # find numbers with text (ie: 0.4mm)
     rgxnum = r"(\d+(?:\.\d*)?)"
-    matchNum = 0
-    strUnit = ''
+    matchnum = 0
 
     if '=' in fline:
         str1 = fline.split('=')[0]
         str2 = ''
 
-        iFound = len(re.findall(rgxnum, fline.split('=')[1]))
-       
-        for m in re.finditer(rgxnum, fline.split('=')[1]):
-            matchNum = matchNum + 1
+        ifound = len(re.findall(rgxnum, fline.split('=')[1]))
+
+        for lvalue in re.finditer(rgxnum, fline.split('=')[1]):
+            matchnum = matchnum + 1
 
             if 'cost' in fline:
                 num = fline.split('=')[1].strip()
                 str2 = '\\num{'+ num +'}'
                 continue
-             
+
             if 'used' in fline:
-                if iFound == 1:
-                    if matchNum == 1:
-                        str2 = '\\SI{'+m.group()+'}{\\gram}'
+                if ifound == 1:
+                    if matchnum == 1:
+                        str2 = '\\SI{'+lvalue.group()+'}{\\gram}'
                     else:
-                        str2 = '\\SI{'+m.group()+'}{\\mm}'
-                if iFound == 3:
-                    if matchNum == 3: continue
-                    if matchNum == 1:
-                        str2 = '\\SI{'+m.group()+'}{\\mm}'
+                        str2 = '\\SI{'+lvalue.group()+'}{\\mm}'
+                if ifound == 3:
+                    if matchnum == 3:
+                        continue
+                    if matchnum == 1:
+                        str2 = '\\SI{'+lvalue.group()+'}{\\mm}'
                     else:
-                        str2 = str2 + ' \\SI{'+m.group()+'}{\\cubic\\cm}'
+                        str2 = str2 + ' \\SI{'+lvalue.group()+'}{\\cubic\\cm}'
 
         fline = str1.title() +' \\dotfill & ' + str2 + ' \\\\\n'
     else:
@@ -391,250 +430,292 @@ def processFilamentLine(fline):
     return fline
 
 
-def processSubSummaryline(sline):
-
+def processsubsummaryline(sline):
+    """Process SUB-Summary Lines"""
     # find numbers with text (ie: 0.4mm)
     rgxnum = r"(\d+(?:\.\d*)?)"
-    matchNum = 0
+    matchnum = 0
 
     if '=' in sline:
         str1 = sline.split('=')[0]
         str2 = ''
 
-        for m in re.finditer(rgxnum, sline.split('=')[1]):
-            matchNum = matchNum + 1
-            if matchNum == 3:
+        for lvalue in re.finditer(rgxnum, sline.split('=')[1]):
+            matchnum = matchnum + 1
+            if matchnum == 3:
                 continue
-            if matchNum == 1:
-                str2 = '\\SI{' + m.group() + '}{\\mm}'
-            if matchNum == 2:
-                str2 = str2 + ' $\\approx$ \\SI[per-mode=fraction]{'+m.group()+'}{\\cubic\\mm\\per\\second}'
+            if matchnum == 1:
+                str2 = '\\SI{' + lvalue.group() + '}{\\mm}'
+            if matchnum == 2:
+                str2 = str2 + ' $\\approx$ \\SI[per-mode=fraction]\
+                    {'+lvalue.group()+'}{\\cubic\\mm\\per\\second}'
 
         sline = str1.title() +' \\dotfill & ' + str2 + ' \\\\\n'
 
     return sline
 
 
+
 # Process PostProcessors
-def processPostProcessLines(mylowline, mysubline):
+def processpostprocesslines(mylowline, mysubline):
+    """Make a list of all the Post Processors"""
     rgx = r"\"(.*)\""
     if mylowline.startswith('post_process'):
-        matches = re.findall(rgx,mysubline)             
+        matches = re.findall(rgx, mysubline)
         if matches: # there has to be a better way, yes?
-            str = matches[0].replace('\\','/').replace('\\','/').replace('\\','/')
-            str = str.replace('//','/').replace('//','/')
-            mysubline = '{\\setlength{\\fboxsep}{4pt}\\setlength{\\fboxrule}{0pt}\\fbox{\\parbox{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}{\\directory[/]{'+str+'}}}}'
+            strng = matches[0].replace('\\', '/').replace('\\', '/').replace('\\', '/')
+            strng = strng.replace('//', '/').replace('//', '/')
+            mysubline = '{\\setlength{\\fboxsep}{4pt}\\setlength{\
+                \\fboxrule}{0pt}\\fbox{\\parbox{\\dimexpr\
+                \\linewidth-2\\fboxsep-2\\fboxrule\\relax}\
+                {\\directory[/]{'+strng+'}}}}'
 
     # always do this:
-    mysubline = LaTeXStringFilter(mysubline.replace(';', '; ').replace(',', ', '))
-     
+    mysubline = latexstringfilter(mysubline.replace(';', '; ').replace(', ', ', '))
+
     return mysubline
 
-       
-def getSlic3rSummary(arrAllLines):
-    lstNewLines = list()
+
+def getslic3rsummary(arr_alllines):
+    """Slic3r Summary"""
+    list_newlines = list()
     cnt = 0
 
-    for line in arrAllLines:
-        if line.startswith('M107'): # I only hope that this is always the case! Otherwise, how am I to find the end of the header?!
+    for line in arr_alllines:
+        # I only hope that this is always the case! Otherwise,
+        # how am I to find the end of the header?!
+        if line.startswith('M107'):
             break
         if '\n' in line:
-            line = rn(line)
+            line = rn_replace(line)
         if line.startswith(';') or not line.strip():
-            line = line.replace('; ','')
+            line = line.replace('; ', '')
 
             if line.lower().startswith('external perimeters extrusion width'):
                 addendum = 'Part Index {0}'.format(cnt)
-                lstNewLines.append(addendum)
+                list_newlines.append(addendum)
                 cnt += 1
 
-            lstNewLines.append(line)
+            list_newlines.append(line)
             #print(line)
 
-    l=0
-    arrAllLines.reverse()
-    for filalins in arrAllLines:
-        filalins = filalins.replace('; ','')
+    lcont = 0
+    arr_alllines.reverse()
+    for filalins in arr_alllines:
+        filalins = filalins.replace('; ', '')
         if filalins.lower().startswith('total filament cost'):
-            lstNewLines.append('Filament Usage')
-            l = 1
-        if l >= 1:
-            lstNewLines.append(filalins)
+            list_newlines.append('Filament Usage')
+            lcont = 1
+        if lcont >= 1:
+            list_newlines.append(filalins)
             #print(filalins)
-            if l >= 1: l += 1
-        if l > 4: break
 
-    return lstNewLines
+            if lcont >= 1:
+                lcont += 1
+        if lcont > 4:
+            break
+
+    return list_newlines
 
 
-def LaTexStyle():
+def latexstyle():
+    """Writes the Package file content"""
     try:
-        styout.write('\\NeedsTeXFormat{LaTeX2e}\n')
-        styout.write('\\ProvidesPackage{'+ str(outputstyle.stem) +'}[2018/8/17 v1.0 '+ str(outputstyle.stem) +']\n')
-        styout.write('\\RequirePackage[utf8]{inputenc}\n')
-        styout.write('\\RequirePackage[T1]{fontenc}\n')
-        styout.write('\\RequirePackage{lmodern}\n')
-        styout.write('\\RequirePackage[includeheadfoot, includehead,heightrounded, left=3cm, right=2cm, top=1.5cm, bottom=1.5cm, footskip=1.7cm]{geometry}\n')
-        styout.write('\\RequirePackage{booktabs}\n')
-        styout.write('\\RequirePackage{ltablex}\n')
-        styout.write('\\RequirePackage{siunitx}\n')
-        styout.write('\\sisetup{detect-weight=true, detect-family=true, round-mode=places, round-precision=1}\n')
-        styout.write('\\RequirePackage{menukeys}\n')
-        styout.write('\\renewmenumacro{\\directory}[/]{pathswithblackfolder}\n')
-        styout.write('\\RequirePackage[justification=justified, singlelinecheck=false, labelfont=bf]{caption}\n')
-        styout.write('\\setlength\\parindent{0pt}\n')
-        styout.write('\\RequirePackage{marginnote}\n')
-        styout.write('\\reversemarginpar\n')
-        styout.write('\\renewcommand*{\\marginfont}{\\footnotesize}\n')
-        styout.write('\\renewcommand*{\\marginnotevadjust}{2pt}\n')
-        styout.write('\\definecolor{color1}{RGB}{0,0,90}\n')
-        styout.write('\\definecolor{color2}{RGB}{0,20,20}\n')
-        styout.write('\\definecolor{CommentColor}{HTML}{' + strFontCommentColor.upper() + '}\n')
+        STYOUT_FILE.write('\\NeedsTeXFormat{LaTeX2e}\n')
+        STYOUT_FILE.write('\\ProvidesPackage{'+ str(OUTPUTSTYLE.stem) +'}\
+            [2018/8/17 v1.0 '+ str(OUTPUTSTYLE.stem) +']\n')
+        STYOUT_FILE.write('\\RequirePackage[utf8]{inputenc}\n')
+        STYOUT_FILE.write('\\RequirePackage[T1]{fontenc}\n')
+        STYOUT_FILE.write('\\RequirePackage{lmodern}\n')
+        STYOUT_FILE.write('\\RequirePackage[includeheadfoot, includehead, \
+            heightrounded, left=3cm, right=2cm, top=1.5cm, \
+            bottom=1.5cm, footskip=1.7cm]{geometry}\n')
+        STYOUT_FILE.write('\\RequirePackage{booktabs}\n')
+        STYOUT_FILE.write('\\RequirePackage{ltablex}\n')
+        STYOUT_FILE.write('\\RequirePackage{siunitx}\n')
+        STYOUT_FILE.write('\\sisetup{detect-weight=true, detect-family=true, \
+            round-mode=places, round-precision=1}\n')
+        STYOUT_FILE.write('\\RequirePackage{menukeys}\n')
+        STYOUT_FILE.write('\\renewmenumacro{\\directory}[/]\
+            {pathswithblackfolder}\n')
+        STYOUT_FILE.write('\\RequirePackage[justification=justified, \
+            singlelinecheck=false, labelfont=bf]{caption}\n')
+        STYOUT_FILE.write('\\setlength\\parindent{0pt}\n')
+        STYOUT_FILE.write('\\RequirePackage{marginnote}\n')
+        STYOUT_FILE.write('\\reversemarginpar\n')
+        STYOUT_FILE.write('\\renewcommand*{\\marginfont}{\\footnotesize}\n')
+        STYOUT_FILE.write('\\renewcommand*{\\marginnotevadjust}{2pt}\n')
+        STYOUT_FILE.write('\\definecolor{color1}{RGB}{0, 0, 90}\n')
+        STYOUT_FILE.write('\\definecolor{color2}{RGB}{0, 20, 20}\n')
+        STYOUT_FILE.write('\\definecolor{CommentColor}{HTML}{' + FONT_COMMENT_COLOR + '}\n')
 
-        if bbed_shape:
-            styout.write('\\definecolor{colbedshape}{RGB}{247,240,221}\n')
+        if BED_SHAPE:
+            STYOUT_FILE.write('\\definecolor{colbedshape}{RGB}{247, 240, 221}\n')
 
-        styout.write('\\usepackage[automark, footsepline, plainfootsepline, headsepline, plainheadsepline]{scrlayer-scrpage}\n')
-        styout.write('\\pagestyle{scrheadings}\n')
-        styout.write('\\ihead{\\huge \\bfseries{Slic3r Report}}\n')
-        styout.write('\\rohead[\\filename{}]{\\filename{}}\n')
-        styout.write('\\lofoot[Slic3r Configuration]{Slic3r Configuration}\n')
-        styout.write('\\rofoot[\\author, \\date]{\\author, \\date}\n')
-        styout.write('\\cohead{}\n')
-        styout.write('\\setkomafont{pageheadfoot}{\\small}\n')
-        styout.write('\\renewcommand\\tableofcontents{\\vspace{-14pt}\\@starttoc{toc}}\n')
-        styout.write('\\newlength{\\tocsep}\n')
-        styout.write('\\setlength\\tocsep{1.5pc} % Sets the indentation of the sections in the table of contents\n')
-        styout.write('\\setcounter{tocdepth}{3} % Three levels in the table of contents section: sections, subsections and subsubsections\n')
-        styout.write('\\RequirePackage{titletoc}\n')
-        styout.write('\\contentsmargin{0cm}\n')
-        styout.write('\\titlecontents{section}[\\tocsep]{\\addvspace{0pt}\\normalsize\\bfseries}{\\contentslabel[\\thecontentslabel]{\\tocsep}}{}{\\dotfill\\thecontentspage}[]\n')
-        styout.write('\\titlecontents{subsection}[2\\tocsep]{\\addvspace{0pt}\\small}{\\contentslabel[\\thecontentslabel]{\\tocsep}}{}{\\ \\titlerule*[.5pc]{.}\\ \\thecontentspage}[]\n')
-        styout.write('\\titlecontents*{subsubsection}[\\tocsep]{\\footnotesize}{}{}{}[\\ \\textbullet\\ ]\n')
-        styout.write('\n\\endinput\n')
+        STYOUT_FILE.write('\\usepackage[automark, footsepline, plainfootsepline, \
+            headsepline, plainheadsepline]{scrlayer-scrpage}\n')
+        STYOUT_FILE.write('\\pagestyle{scrheadings}\n')
+        STYOUT_FILE.write('\\ihead{\\huge \\bfseries{Slic3r Report}}\n')
+        STYOUT_FILE.write('\\rohead[\\filename{}]{\\filename{}}\n')
+        STYOUT_FILE.write('\\lofoot[Slic3r Configuration]{Slic3r Configuration}\n')
+        STYOUT_FILE.write('\\rofoot[\\author, \\date]{\\author, \\date}\n')
+        STYOUT_FILE.write('\\cohead{}\n')
+        STYOUT_FILE.write('\\setkomafont{pageheadfoot}{\\small}\n')
+        STYOUT_FILE.write('\\renewcommand\\tableofcontents{\\vspace{-14pt}\\@starttoc{toc}}\n')
+        STYOUT_FILE.write('\\newlength{\\tocsep}\n')
+        STYOUT_FILE.write('\\setlength\\tocsep{1.5pc}\n')
+        STYOUT_FILE.write('\\setcounter{tocdepth}{3}\n')
+        STYOUT_FILE.write('\\RequirePackage{titletoc}\n')
+        STYOUT_FILE.write('\\contentsmargin{0cm}\n')
+        STYOUT_FILE.write('\\titlecontents{section}[\\tocsep]{\\addvspace{0pt}\
+            \\normalsize\\bfseries}{\\contentslabel[\\thecontentslabel]{\\tocsep}}\
+            {}{\\dotfill\\thecontentspage}[]\n')
+        STYOUT_FILE.write('\\titlecontents{subsection}[2\\tocsep]{\\addvspace{0pt}\\small}\
+            {\\contentslabel[\\thecontentslabel]{\\tocsep}}\
+            {}{\\ \\titlerule*[.5pc]{.}\\ \\thecontentspage}[]\n')
+        STYOUT_FILE.write('\\titlecontents*{subsubsection}[\\tocsep]\
+            {\\footnotesize}{}{}{}[\\ \\textbullet\\ ]\n')
+        STYOUT_FILE.write('\n\\endinput\n')
     except Exception as ex:
-        print (str(ex))
-        
+        STYOUT_FILE.close()
+        print(str(ex))
 
-def LaTexTemplate():
+
+def latextemplate():
+    """Writes the main TeX file. This "file" can be changed to match your style or layout"""
     try:
 
-        tplout.write('\\documentclass[ %\n')
-        tplout.write('hyperref,\n')
-        tplout.write('10pt,\n')
-        tplout.write(']{scrartcl}\n')
-        tplout.write('\\def\\filename{' + LaTeXStringFilter(pdfname) + '.gcode}\n')
-        tplout.write('\\def\\author{'+ LaTeXStringFilter(strAuthor) +'}\n')
-        tplout.write('\\def\\date{\\today}\n')
-        tplout.write('\\usepackage{'+ str(outputstyle.stem) +'}\n')
+        TPLOUT_FILE.write('\\documentclass[ %\n')
+        TPLOUT_FILE.write('hyperref, \n')
+        TPLOUT_FILE.write('10pt, \n')
+        TPLOUT_FILE.write(']{scrartcl}\n')
+        TPLOUT_FILE.write('\\def\\filename{' + latexstringfilter(PDF_NAME) + '.gcode}\n')
+        TPLOUT_FILE.write('\\def\\author{'+ latexstringfilter(AUTHOR_NAME) +'}\n')
+        TPLOUT_FILE.write('\\def\\date{\\today}\n')
+        TPLOUT_FILE.write('\\usepackage{'+ str(OUTPUTSTYLE.stem) +'}\n')
 
-        if bbed_shape: 
-            tplout.write('\\usepackage{environ}\n')
-            tplout.write('\\makeatletter\n')
-            tplout.write('\\newsavebox{\\measure@tikzpicture}\n')
-            tplout.write('\\NewEnviron{scaletikzpicturetowidth}[1]{\\def\\tikz@width{#1} \\def\\tikzscale{1}\\begin{lrbox}{\\measure@tikzpicture} \\BODY \\end{lrbox} \\pgfmathparse{#1/\\wd\\measure@tikzpicture} \\edef\\tikzscale{\\pgfmathresult} \\BODY}\n')
-            tplout.write('\makeatother\n')
+        if BED_SHAPE:
+            TPLOUT_FILE.write('\\usepackage{environ}\n')
+            TPLOUT_FILE.write('\\makeatletter\n')
+            TPLOUT_FILE.write('\\newsavebox{\\measure@tikzpicture}\n')
+            TPLOUT_FILE.write('\\NewEnviron{scaletikzpicturetowidth}[1]\
+                {\\def\\tikz@width{#1} \\def\\tikzscale{1}\\begin{lrbox}\
+                {\\measure@tikzpicture} \\BODY \\end{lrbox} \
+                \\pgfmathparse{#1/\\wd\\measure@tikzpicture} \
+                \\edef\\tikzscale{\\pgfmathresult} \\BODY}\n')
+            TPLOUT_FILE.write('\\makeatother\n')
 
-        tplout.write('\\usepackage{hyperref}\n')
-        tplout.write('\\hypersetup{hidelinks, colorlinks=true, urlcolor=color2, citecolor=color1, linkcolor=color1, pdfauthor={\\author}, pdftitle={\\filename}, pdfsubject = {Slic3r Configuration Report: \\filename.gcode}, pdfcreator={LaTeX with a bunch of packages}, pdfproducer={pdflatex with a dash of Python}}\n')
-        tplout.write('\\begin{document}\n')
-        tplout.write('\\marginnote{Author:} 	{\\author} \\\\[5pt]\n')
-        tplout.write('\\marginnote{Date:} 	    {\\date} \\\\[5pt]\n')
+        TPLOUT_FILE.write('\\usepackage{hyperref}\n')
+        TPLOUT_FILE.write('\\hypersetup{hidelinks, colorlinks=true, \
+            urlcolor=color2, citecolor=color1, linkcolor=color1, \
+            pdfauthor={\\author}, pdftitle={\\filename}, \
+            pdfsubject = {Slic3r Configuration Report: \\filename.gcode}, \
+            pdfcreator={LaTeX with a bunch of packages}, \
+            pdfproducer={pdflatex with a dash of Python}}\n')
+        TPLOUT_FILE.write('\\begin{document}\n')
+        TPLOUT_FILE.write('\\marginnote{Author:} 	{\\author} \\\\[5pt]\n')
+        TPLOUT_FILE.write('\\marginnote{Date:} 	    {\\date} \\\\[5pt]\n')
 
-        newpath = LaTeXStringFilter(str(myABSPath.replace(os.path.sep, ';')))
-        tplout.write('\\marginnote{File:}  {\\textbf{\\filename} \\newline {\\setlength{\\fboxsep}{4pt}\\setlength{\\fboxrule}{0pt} \\fbox{\\parbox{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}{\\directory[;]{' + newpath + '}}}}}\\\\[-2pt] \\rule{\\linewidth}{.4pt} \\\\[5pt]\n')
+        newpath = latexstringfilter(str(ABSOLUTE_PATH.replace(os.path.sep, ';')))
+        TPLOUT_FILE.write('\\marginnote{File:}  {\\textbf{\\filename} \
+            \\newline {\\setlength{\\fboxsep}{4pt}\\setlength{\\fboxrule}{0pt} \
+            \\fbox{\\parbox{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}\
+            {\\directory[;]{' + newpath + '}}}}}\\\\[-2pt] \\rule{\\linewidth}{.4pt} \\\\[5pt]\n')
 
-        tplout.write('\\marginnote{Content:}    {\\tableofcontents}\n')
-        tplout.write('\\vspace{-8pt}\\rule{\\linewidth}{.4pt}\n')
-    
-        if (bSection_Config == False):
-            tplout.write('\\section{Summary}\n')
-            tplout.write('\\begin{tabularx}{\\linewidth}{@{}p{7.5cm}>{\\bfseries}X@{}}\n')
-            tplout.write('	\\caption{\\filename{} Summary} \\\\[-8pt] &  \\\\ \\toprule\n')
-            tplout.write('	\\textbf{Option} & \\textbf{Value} \\\\ \\midrule\n')
-            tplout.write('	\endhead	\n')
-            tplout.write('		\\input{'+ str(outputsummary.stem) + '.tex}\n')
-            tplout.write('	\\bottomrule\n')
-            tplout.write('\\end{tabularx}\n')
-            tplout.write('\\newpage\n')
+        TPLOUT_FILE.write('\\marginnote{Content:}    {\\tableofcontents}\n')
+        TPLOUT_FILE.write('\\vspace{-8pt}\\rule{\\linewidth}{.4pt}\n')
 
-        if (bSection_Summary == False):
-            tplout.write('\\section{Slic3r Configuration}\n')
-            tplout.write('\\begin{tabularx}{\\linewidth}{@{}p{7.5cm}>{\\bfseries}X@{}}\n')
-            tplout.write('	\\caption{\\filename{} Slic3r-Configuration} \\\\[-8pt] &  \\\\ \\toprule\n')
-            tplout.write('	\\textbf{Option} & \\textbf{Value} \\\\ \\midrule\n')
-            tplout.write('	\\endhead	\n')
-            tplout.write('		\\input{'+ str(outputconfig.stem) + '.tex}\n')
-            tplout.write('	\\bottomrule\n')
-            tplout.write('\\end{tabularx}\n')
+        if SECTION_CONFIG is False:
+            TPLOUT_FILE.write('\\section{Summary}\n')
+            TPLOUT_FILE.write('\\begin{tabularx}{\\linewidth}{@{}p{7.5cm}>{\\bfseries}X@{}}\n')
+            TPLOUT_FILE.write('	\\caption{\\filename{} Summary} \\\\[-8pt] &  \\\\ \\toprule\n')
+            TPLOUT_FILE.write('	\\textbf{Option} & \\textbf{Value} \\\\ \\midrule\n')
+            TPLOUT_FILE.write('	\\endhead	\n')
+            TPLOUT_FILE.write('		\\input{'+ str(OUTPUTSUMMARY.stem) + '.tex}\n')
+            TPLOUT_FILE.write('	\\bottomrule\n')
+            TPLOUT_FILE.write('\\end{tabularx}\n')
+            TPLOUT_FILE.write('\\newpage\n')
 
-        tplout.write('\\end{document}\n')
+        if SECTION_SUMMARY is False:
+            TPLOUT_FILE.write('\\section{Slic3r Configuration}\n')
+            TPLOUT_FILE.write('\\begin{tabularx}{\\linewidth}{@{}p{7.5cm}>{\\bfseries}X@{}}\n')
+            TPLOUT_FILE.write('	\\caption{\\filename{} Slic3r-Configuration} \\\\[-8pt] \
+                &  \\\\ \\toprule\n')
+            TPLOUT_FILE.write('	\\textbf{Option} & \\textbf{Value} \\\\ \\midrule\n')
+            TPLOUT_FILE.write('	\\endhead\n')
+            TPLOUT_FILE.write('		\\input{'+ str(OUTPUTCONFIG.stem) + '.tex}\n')
+            TPLOUT_FILE.write('	\\bottomrule\n')
+            TPLOUT_FILE.write('\\end{tabularx}\n')
+
+        TPLOUT_FILE.write('\\end{document}\n')
 
     except Exception as ex:
-        print (str(ex))
-
-        
-
-def rn(str):
-    str = str.replace('\r','')
-    str = str.replace('\n','')
-    return str
+        TPLOUT_FILE.close()
+        print(str(ex))
 
 
-def LaTeXStringFilter(mystring):
-    mystring = mystring.replace('_','\_')
+def rn_replace(strreplace):
+    """Remove all \r and \n"""
+    strreplace = strreplace.replace('\r', '')
+    strreplace = strreplace.replace('\n', '')
+    return strreplace
+
+
+def latexstringfilter(mystring):
+    """Additional TeX-Filters. Revove stuff TeX does not like."""
+    mystring = mystring.replace('_', '\_')
 
     return mystring
 
 
-def runLaTeX():
-    
+def runlatex():
+    """Run TeX and remove all temp files"""
     # files to clean
-    cleanup=list()
-    cleanup = [outputbedshape, outputsummary, outputconfig, outputstyle, outputtplout]
-    tocfile = Path(dir_path/str(pdfname + '.toc'))
-    auxfile = Path(dir_path/str(pdfname + '.aux'))
-    logfile = Path(dir_path/str(pdfname + '.log'))
-    outfile = Path(dir_path/str(pdfname + '.out'))
-    pdffile = Path(dir_path/str(pdfname + '.pdf'))
+    cleanup = list()
+    cleanup = [OUTPUTBEDSHAPE, OUTPUTSUMMARY, OUTPUTCONFIG, OUTPUTSTYLE, OUTPUTTPLOUT]
+    tocfile = Path(DIR_PATH/str(PDF_NAME + '.toc'))
+    auxfile = Path(DIR_PATH/str(PDF_NAME + '.aux'))
+    logfile = Path(DIR_PATH/str(PDF_NAME + '.log'))
+    outfile = Path(DIR_PATH/str(PDF_NAME + '.out'))
+    pdffile = Path(DIR_PATH/str(PDF_NAME + '.pdf'))
 
     if os.name == 'nt':
         # the joy of Windows
-        texfile = PureWindowsPath(tplout.name)
+        texfile = PureWindowsPath(TPLOUT_FILE.name)
         pdffile = PureWindowsPath(str(pdffile))
         tocfile = PureWindowsPath(str(tocfile))
         auxfile = PureWindowsPath(str(auxfile))
         logfile = PureWindowsPath(str(logfile))
         outfile = PureWindowsPath(str(outfile))
-        
+
     else:
-        texfile = PurePosixPath(tplout.name)
-       
+        texfile = PurePosixPath(TPLOUT_FILE.name)
+
     # more files to clean up
     cleanup.append(tocfile)
     cleanup.append(auxfile)
     cleanup.append(logfile)
-    cleanup.append(outfile)         
-        
-    cmd = ['pdflatex', '-output-directory', str(dir_path), '-interaction=nonstopmode', str(texfile)]
+    cleanup.append(outfile)
 
-    # make to runs because of TOC
-    for x in range(0, 2):
+    cmd = ['pdflatex', '-output-directory', str(DIR_PATH), '-interaction=nonstopmode', str(texfile)]
+
+    # make two runs because of TOC
+    for iruns in range(0, 2):
         proc = subprocess.Popen(cmd)
         proc.communicate()
-    
+
     retcode = proc.returncode
-    if not retcode == 0:
+    if retcode != 0:
         print('Error occured in .tex and PDF will be removed.')
         cleanup.append(pdffile)
 
     else:
-        if bOpenPDF == True:
+        if OPEN_PDF is True:
             if os.name == 'nt':
-                subprocess.Popen(str(pdffile), shell = True)
+                subprocess.Popen(str(pdffile), shell=True)
             else:
                 # this wont work on my ubunut...?
-                os.system('/usr/bin/xdg-open ' + str(pdffile))  
+                os.system('/usr/bin/xdg-open ' + str(pdffile))
 
     # TeX cleanup
     try:
@@ -642,16 +723,16 @@ def runLaTeX():
             if os.path.exists(str(file)):
                 print('Removing file: ' + str(file))
                 os.remove(str(file))
-    except OSError as e:
-        print ('Error: {0} - {1}.'.format(e.filename,e.strerror))
+    except OSError as exp:
+        print('Error: {0} - {1}.'.format(exp.filename, exp.strerror))
 
-    if os.path.exists(str(pdffile)): print('\n\nYour document is ready at {0}.'.format(str(pdffile)))
-   
+    if os.path.exists(str(pdffile)):
+        print('\n\nYour document is ready at {0}.'.format(str(pdffile)))
+
 
 try:
     main()
-    runLaTeX()
+    runlatex()
 
 except Exception as ex:
-     print (str(ex))
-
+    print(str(ex))
