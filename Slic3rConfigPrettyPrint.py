@@ -1,4 +1,4 @@
-"""Creates a Package to be used in TeX and a CWL file for TeXstudio."""
+"""Creates a Report from GCode sliced by Slic3r"""
 #!/usr/bin/python
 
 #TODO: Filament usage in Meter
